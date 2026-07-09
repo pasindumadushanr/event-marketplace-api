@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum VendorStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model Role {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  description String?
+  users       User[]
+  permissions Permission[] @relation("RolePermissions")
+}
+
+model Permission {
+  id     String @id @default(uuid()) @db.Uuid
+  action String @unique
+  roles  Role[] @relation("RolePermissions")
+}
+
+model User {
+  id                 String     @id @default(uuid()) @db.Uuid
+  firstName          String
+  lastName           String
+  email              String     @unique
+  phone              String?    @unique
+  password           String
+  profileImage       String?
+  status             UserStatus @default(ACTIVE)
+  emailVerified      Boolean    @default(false)
+  hashedRefreshToken String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  roleId             String     @db.Uuid
+  role               Role       @relation(fields: [roleId], references: [id])
+  businesses         Business[]
+  bookingsAsCustomer Booking[]  @relation("CustomerBookings")
+  reviewsAsCustomer  Review[]   @relation("CustomerReviews")
+}
+
+model BusinessCategory {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String         @unique
+  slug        String         @unique
+  description String?
+  icon        String?
+  coverImage  String?
+  sortOrder   Int            @default(0)
+  isFeatured  Boolean        @default(false)
+  status      EntityStatus   @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  businesses  Business[]
+}
+
+model Business {
+  id                 String         @id @default(uuid()) @db.Uuid
+  name               String
+  description        String?
+  
+  // Contact Info
+  email              String?
+  phone              String?
+  website            String?
+  facebook           String?
+  instagram          String?
+  youtube            String?
+  businessHours      String?
+  
+  // Location
+  address            String?
+  city               String?
+  district           String?
+  province           String?
+  zipCode            String?
+  country            String?        @default("Sri Lanka")
+  googleMapLocation  String?
+  
+  // Media
+  logo               String?
+  coverImage         String?
+  
+  // Verification
+  isVerified         Boolean        @default(false)
+  verificationDocs   String?
+  
+  status             EntityStatus   @default(ACTIVE)
+  vendorStatus       VendorStatus   @default(PENDING)
+  rejectionReason    String?
+  
+  // Relations
+  vendorId           String         @db.Uuid
+  vendor             User           @relation(fields: [vendorId], references: [id])
+  
+  categoryId         String         @db.Uuid
+  category           BusinessCategory @relation(fields: [categoryId], references: [id])
+  
+  galleries          Gallery[]
+  packages           Package[]
+  bookings           Booking[]
+  reviews            Review[]
+  documents          Document[]
+  
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+model Gallery {
+  id          String    @id @default(uuid()) @db.Uuid
+  businessId  String    @db.Uuid
+  business    Business  @relation(fields: [businessId], references: [id])
+  url         String
+  type        MediaType @default(IMAGE)
+  isCover     Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Package {
+  id          String    @id @default(uuid()) @db.Uuid
+  businessId  String    @db.Uuid
+  business    Business  @relation(fields: [businessId], references: [id])
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  features    String[]
+  duration    String?
+  status      EntityStatus @default(ACTIVE)
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Booking {
+  id          String        @id @default(uuid()) @db.Uuid
+  businessId  String        @db.Uuid
+  business    Business      @relation(fields: [businessId], references: [id])
+  customerId  String        @db.Uuid
+  customer    User          @relation("CustomerBookings", fields: [customerId], references: [id])
+  packageId   String?       @db.Uuid
+  package     Package?      @relation(fields: [packageId], references: [id])
+  status      BookingStatus @default(PENDING)
+  date        DateTime
+  totalAmount Decimal       @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Review {
+  id          String    @id @default(uuid()) @db.Uuid
+  businessId  String    @db.Uuid
+  business    Business  @relation(fields: [businessId], references: [id])
+  customerId  String    @db.Uuid
+  customer    User      @relation("CustomerReviews", fields: [customerId], references: [id])
+  rating      Int
+  comment     String?
+  reply       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Document {
+  id          String         @id @default(uuid()) @db.Uuid
+  businessId  String         @db.Uuid
+  business    Business       @relation(fields: [businessId], references: [id])
+  type        String
+  url         String
+  status      DocumentStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
