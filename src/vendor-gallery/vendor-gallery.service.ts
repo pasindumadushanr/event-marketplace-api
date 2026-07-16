@@ -61,9 +61,38 @@ export class VendorGalleryService {
     });
 
     // Set the new cover image
+    // Set the new cover image
     return (this.prisma as any).gallery.update({
       where: { id: galleryId },
       data: { isCover: true }
     });
+  }
+
+  async reorderItems(vendorId: string, itemIds: string[]) {
+    const businessId = await this.getMyBusinessId(vendorId);
+
+    // Verify all items belong to this business
+    const items = await (this.prisma as any).gallery.findMany({
+      where: {
+        id: { in: itemIds },
+        businessId,
+      },
+    });
+
+    if (items.length !== itemIds.length) {
+      throw new NotFoundException('Some gallery items do not belong to you or do not exist.');
+    }
+
+    // Update in transaction
+    const updates = itemIds.map((id, index) => {
+      return (this.prisma as any).gallery.update({
+        where: { id },
+        data: { sortOrder: index },
+      });
+    });
+
+    await this.prisma.$transaction(updates);
+    
+    return { success: true, message: 'Gallery reordered successfully.' };
   }
 }

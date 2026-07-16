@@ -11,6 +11,7 @@ import { BusinessCategoriesModule } from './business-categories/business-categor
 import { VendorBusinessModule } from './vendor-business/vendor-business.module';
 import { VendorGalleryModule } from './vendor-gallery/vendor-gallery.module';
 import { AdminApprovalsModule } from './admin-approvals/admin-approvals.module';
+import { VendorContentBuilderModule } from './vendor-content-builder/vendor-content-builder.module';
 
 @Module({
   imports: [
@@ -24,7 +25,9 @@ import { AdminApprovalsModule } from './admin-approvals/admin-approvals.module';
     RolesModule, 
     BusinessCategoriesModule, 
     VendorBusinessModule, 
-    VendorGalleryModule, AdminApprovalsModule
+    VendorGalleryModule, 
+    AdminApprovalsModule,
+    VendorContentBuilderModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -147,6 +147,7 @@ model Business {
   bookings           Booking[]
   reviews            Review[]
   documents          Document[]
+  contentSections    BusinessContentSection[]
   
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -215,6 +216,32 @@ model Document {
   type        String
   url         String
   status      DocumentStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model BusinessContentSection {
+  id          String         @id @default(uuid()) @db.Uuid
+  businessId  String         @db.Uuid
+  business    Business       @relation(fields: [businessId], references: [id])
+  
+  type        String         @default("TEXT")
+  position    String         @default("AFTER_ABOUT")
+  sortOrder   Int            @default(0)
+  
+  title       String?
+  description String?        @db.Text
+  imageUrl    String?
+  content     Json?          
+  
+  status      ContentStatus  @default(DRAFT)
+  
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }

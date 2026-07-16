@@ -12,21 +12,31 @@ export class VendorBusinessController {
 
   @Get()
   getMyBusiness(@Request() req: any) {
-    return this.service.getMyBusiness(req.user.userId);
+    return this.service.getMyBusiness(req.user.id);
   }
 
   @Post('onboarding/wizard')
   submitOnboarding(@Request() req: any, @Body() data: any) {
-    return this.service.submitOnboarding(req.user.userId, data);
+    return this.service.submitOnboarding(req.user.id, data);
   }
 
   @Get('onboarding/status')
   getOnboardingStatus(@Request() req: any) {
-    return this.service.getOnboardingStatus(req.user.userId);
+    return this.service.getOnboardingStatus(req.user.id);
   }
 
   @Patch()
   updateMyBusiness(@Request() req: any, @Body() data: any) {
-    return this.service.updateMyBusiness(req.user.userId, data);
+    return this.service.updateMyBusiness(req.user.id, data);
+  }
+
+  @Patch('publish')
+  publishMyBusiness(@Request() req: any) {
+    return this.service.publishMyBusiness(req.user.id);
+  }
+
+  @Patch('unpublish')
+  unpublishMyBusiness(@Request() req: any) {
+    return this.service.unpublishMyBusiness(req.user.id);
   }
 }

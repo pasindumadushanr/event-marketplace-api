@@ -27,13 +27,18 @@ export class VendorBusinessService {
       throw new BadRequestException('You already have submitted an application.');
     }
     
-    return (this.prisma as any).business.create({
-      data: {
-        ...data,
-        vendorId,
-        vendorStatus: 'UNDER_REVIEW'
-      }
-    });
+    try {
+      return await (this.prisma as any).business.create({
+        data: {
+          ...data,
+          vendorId,
+          vendorStatus: 'UNDER_REVIEW'
+        }
+      });
+    } catch (error: any) {
+      console.error('Error in submitOnboarding:', error);
+      throw new BadRequestException('Failed to create business: ' + error.message);
+    }
   }
 
   async getOnboardingStatus(vendorId: string) {
@@ -60,6 +65,28 @@ export class VendorBusinessService {
     return (this.prisma as any).business.update({
       where: { id: business.id },
       data
+    });
+  }
+
+  async publishMyBusiness(vendorId: string) {
+    const business = await (this.prisma as any).business.findFirst({
+      where: { vendorId }
+    });
+    if (!business) throw new NotFoundException('Business not found.');
+    return (this.prisma as any).business.update({
+      where: { id: business.id },
+      data: { status: 'ACTIVE' }
+    });
+  }
+
+  async unpublishMyBusiness(vendorId: string) {
+    const business = await (this.prisma as any).business.findFirst({
+      where: { vendorId }
+    });
+    if (!business) throw new NotFoundException('Business not found.');
+    return (this.prisma as any).business.update({
+      where: { id: business.id },
+      data: { status: 'INACTIVE' }
     });
   }
 }

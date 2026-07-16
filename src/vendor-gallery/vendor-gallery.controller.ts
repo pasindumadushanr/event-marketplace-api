@@ -58,6 +58,14 @@ export class VendorGalleryController {
     return this.service.deleteGalleryItem(req.user.userId, id);
   }
 
+  @Patch('reorder')
+  reorderItems(@Request() req: any, @Body() data: { itemIds: string[] }) {
+    if (!data.itemIds || !Array.isArray(data.itemIds)) {
+      throw new BadRequestException('Invalid item IDs array');
+    }
+    return this.service.reorderItems(req.user.userId, data.itemIds);
+  }
+
   @Patch(':id/cover')
   setCover(@Request() req: any, @Param('id') id: string) {
     return this.service.setCoverImage(req.user.userId, id);
