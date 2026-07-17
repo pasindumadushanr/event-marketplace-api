@@ -16,6 +16,8 @@ import { VendorPackagesModule } from './vendor-packages/vendor-packages.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { CustomerAccountModule } from './customer-account/customer-account.module';
 import { DiscoveryModule } from './discovery/discovery.module';
+import { EmailModule } from './email/email.module';
+import { ContactModule } from './contact/contact.module';
 
 @Module({
   imports: [
@@ -35,7 +37,9 @@ import { DiscoveryModule } from './discovery/discovery.module';
     VendorPackagesModule,
     BookingsModule,
     CustomerAccountModule,
-    DiscoveryModule
+    DiscoveryModule,
+    EmailModule,
+    ContactModule
   ],
   controllers: [AppController],
   providers: [AppService],
