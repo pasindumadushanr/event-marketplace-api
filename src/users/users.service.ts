@@ -8,12 +8,22 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: Prisma.UserCreateInput): Promise<User> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+    const orConditions: any[] = [{ email: data.email }];
+    if (data.phone) {
+      orConditions.push({ phone: data.phone });
+    }
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: { OR: orConditions },
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+      if (existingUser.email === data.email) {
+        throw new ConflictException('User with this email already exists');
+      }
+      if (existingUser.phone === data.phone) {
+        throw new ConflictException('User with this phone number already exists');
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
