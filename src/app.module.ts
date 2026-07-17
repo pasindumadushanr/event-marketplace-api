@@ -12,6 +12,10 @@ import { VendorBusinessModule } from './vendor-business/vendor-business.module';
 import { VendorGalleryModule } from './vendor-gallery/vendor-gallery.module';
 import { AdminApprovalsModule } from './admin-approvals/admin-approvals.module';
 import { VendorContentBuilderModule } from './vendor-content-builder/vendor-content-builder.module';
+import { VendorPackagesModule } from './vendor-packages/vendor-packages.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { CustomerAccountModule } from './customer-account/customer-account.module';
+import { DiscoveryModule } from './discovery/discovery.module';
 
 @Module({
   imports: [
@@ -27,7 +31,11 @@ import { VendorContentBuilderModule } from './vendor-content-builder/vendor-cont
     VendorBusinessModule, 
     VendorGalleryModule, 
     AdminApprovalsModule,
-    VendorContentBuilderModule
+    VendorContentBuilderModule,
+    VendorPackagesModule,
+    BookingsModule,
+    CustomerAccountModule,
+    DiscoveryModule
   ],
   controllers: [AppController],
   providers: [AppService],

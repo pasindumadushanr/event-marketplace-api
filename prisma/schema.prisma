@@ -82,6 +82,7 @@ model User {
   businesses         Business[]
   bookingsAsCustomer Booking[]  @relation("CustomerBookings")
   reviewsAsCustomer  Review[]   @relation("CustomerReviews")
+  favoriteBusinesses FavoriteBusiness[]
 }
 
 model BusinessCategory {
@@ -112,7 +113,6 @@ model Business {
   facebook           String?
   instagram          String?
   youtube            String?
-  businessHours      String?
   
   // Location
   address            String?
@@ -148,6 +148,7 @@ model Business {
   reviews            Review[]
   documents          Document[]
   contentSections    BusinessContentSection[]
+  favoritedBy        FavoriteBusiness[]
   
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -244,4 +245,15 @@ model BusinessContentSection {
   
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+model FavoriteBusiness {
+  id          String    @id @default(uuid()) @db.Uuid
+  customerId  String    @db.Uuid
+  customer    User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  businessId  String    @db.Uuid
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([customerId, businessId])
 }

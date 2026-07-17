@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, UseInterceptors, UploadedFile, BadRequestException, Body } from '@nestjs/common';
 import { VendorGalleryService } from './vendor-gallery.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
