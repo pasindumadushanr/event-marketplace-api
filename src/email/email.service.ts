@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { IEmailProvider } from './email.interface';
+import type { IEmailProvider } from './email.interface';
 import { EmailTemplates } from './email.templates';
 
 @Injectable()

@@ -1,14 +1,27 @@
-import { Controller, Get, Post, Patch, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Request, UseInterceptors, UploadedFile, Inject } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VendorBusinessService } from './vendor-business.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
+import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
+import type { StorageProvider } from '../common/providers/storage.provider';
 
 @Controller('vendor/business')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('VENDOR')
 export class VendorBusinessController {
-  constructor(private readonly service: VendorBusinessService) {}
+  constructor(
+    private readonly service: VendorBusinessService,
+    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider
+  ) {}
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    const url = await this.storage.uploadFile(file, 'business');
+    return { url };
+  }
 
   @Get()
   getMyBusiness(@Request() req: any) {

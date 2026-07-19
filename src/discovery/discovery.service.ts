@@ -122,4 +122,53 @@ export class DiscoveryService {
       }
     };
   }
+
+  async getVendorProfile(identifier: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
+    
+    let business: any = null;
+
+    if (isUuid) {
+      business = await (this.prisma as any).business.findFirst({
+        where: { id: identifier, status: 'ACTIVE' },
+        include: {
+          category: { select: { name: true, id: true } },
+          galleries: { orderBy: { sortOrder: 'asc' } },
+          packages: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } },
+          reviews: {
+            include: { customer: { select: { firstName: true, lastName: true, profileImage: true } } },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
+    } else {
+      // Fallback for SEO Slug search
+      const allActive = await (this.prisma as any).business.findMany({
+        where: { status: 'ACTIVE' },
+        include: {
+          category: { select: { name: true, id: true } },
+          galleries: { orderBy: { sortOrder: 'asc' } },
+          packages: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } },
+          reviews: {
+            include: { customer: { select: { firstName: true, lastName: true, profileImage: true } } },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
+      business = allActive.find((b: any) => b.profileSettings?.seo?.slug === identifier);
+    }
+
+    if (!business) return null;
+
+    const totalRatings = business.reviews.reduce((acc: any, rev: any) => acc + rev.rating, 0);
+    const avgRating = business.reviews.length > 0 ? (totalRatings / business.reviews.length).toFixed(1) : 0;
+    const startingPrice = business.packages.length > 0 ? business.packages[0].price : 0;
+
+    return {
+      ...business,
+      rating: Number(avgRating),
+      reviewCount: business.reviews.length,
+      startingPrice
+    };
+  }
 }

@@ -134,6 +134,7 @@ model Business {
   status             EntityStatus   @default(ACTIVE)
   vendorStatus       VendorStatus   @default(PENDING)
   rejectionReason    String?
+  profileSettings    Json?
   
   // Relations
   vendorId           String         @db.Uuid

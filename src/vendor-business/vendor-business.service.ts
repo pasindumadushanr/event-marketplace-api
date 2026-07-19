@@ -62,6 +62,15 @@ export class VendorBusinessService {
       throw new NotFoundException('Business not found.');
     }
     
+    // Merge profileSettings if provided
+    if (data.profileSettings) {
+      const existingSettings = (business.profileSettings as any) || {};
+      data.profileSettings = {
+        ...existingSettings,
+        ...data.profileSettings,
+      };
+    }
+
     return (this.prisma as any).business.update({
       where: { id: business.id },
       data
