@@ -12,7 +12,7 @@ import { SmtpEmailProvider } from './providers/smtp-email.provider';
       provide: 'EMAIL_PROVIDER',
       useFactory: (configService: ConfigService) => {
         const provider = configService.get<string>('SMTP_PROVIDER', 'mock');
-        return provider === 'smtp' ? new SmtpEmailProvider() : new MockEmailProvider();
+        return provider === 'smtp' ? new SmtpEmailProvider(configService) : new MockEmailProvider();
       },
       inject: [ConfigService],
     },
