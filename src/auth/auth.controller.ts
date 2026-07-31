@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, Req, Res } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -31,5 +32,31 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout user' })
   logout(@CurrentUser() user: any) {
     return this.authService.logout(user.id);
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Initiate Google OAuth Login' })
+  async googleAuth(@Req() req) {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Google OAuth Callback' })
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    // The user is injected by Passport's GoogleStrategy
+    const user = req.user;
+    
+    // Generate our application tokens
+    const tokens = await this.authService.generateTokens(
+      user.id,
+      user.email,
+      user.role ? (user as any).role.name : 'CUSTOMER', // Adjust as needed based on how roles are loaded
+      user.firstName,
+      user.lastName,
+    );
+
+    // Redirect to frontend with tokens in URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
   }
 }

@@ -1,16 +1,25 @@
 import { User } from '@prisma/client';
 import { Exclude } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UserEntity implements User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  @ApiPropertyOptional()
   phone: string | null;
   
   @Exclude()
-  password: string;
+  password: string | null;
+
+  @ApiProperty()
+  authProvider: string;
+
+  @ApiPropertyOptional()
+  googleId: string | null;
   
+  @ApiPropertyOptional()
   profileImage: string | null;
   status: any;
   emailVerified: boolean;
