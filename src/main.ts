@@ -2,8 +2,11 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as dns from 'dns';
 
 async function bootstrap() {
+  dns.setDefaultResultOrder('ipv4first');
+  
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
