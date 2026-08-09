@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Patch, Body, Query } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -17,6 +17,12 @@ export class UsersController {
   findAll(@Query('roles') roles?: string) {
     const rolesArray = roles ? roles.split(',') : undefined;
     return this.usersService.findAll(rolesArray);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateMe(@Request() req: any, @Body() data: any) {
+    return this.usersService.updateMe(req.user.id, data);
   }
 
   @Get('email/:email')

@@ -44,6 +44,13 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 enum DocumentStatus {
   PENDING
   VERIFIED
@@ -193,6 +200,8 @@ model Booking {
   packageId   String?       @db.Uuid
   package     Package?      @relation(fields: [packageId], references: [id])
   status      BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentSessionId String?
   date        DateTime
   totalAmount Decimal       @db.Decimal(10, 2)
   notes       String?
@@ -280,4 +289,27 @@ model FavoriteBusiness {
   createdAt   DateTime  @default(now())
 
   @@unique([customerId, businessId])
+}
+
+model Banner {
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String
+  subtitle    String?
+  imageUrl    String
+  link        String?
+  isActive    Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Faq {
+  id          String       @id @default(uuid()) @db.Uuid
+  question    String
+  answer      String       @db.Text
+  category    String       @default("GENERAL")
+  isActive    Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }

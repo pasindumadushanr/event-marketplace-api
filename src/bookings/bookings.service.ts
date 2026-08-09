@@ -71,4 +71,37 @@ export class BookingsService {
       data: { status }
     });
   }
+
+  // For Admins
+  async getAllBookings() {
+    return (this.prisma as any).booking.findMany({
+      include: {
+        customer: {
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+        },
+        business: {
+          select: { id: true, businessName: true, vendor: { select: { email: true } } }
+        },
+        package: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // For Admins
+  async updateBookingStatusAdmin(bookingId: string, status: string) {
+    const booking = await (this.prisma as any).booking.findUnique({
+      where: { id: bookingId }
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    
+    if (!['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status)) {
+      throw new BadRequestException('Invalid status');
+    }
+
+    return (this.prisma as any).booking.update({
+      where: { id: bookingId },
+      data: { status }
+    });
+  }
 }

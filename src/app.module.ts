@@ -19,6 +19,12 @@ import { CustomerAccountModule } from './customer-account/customer-account.modul
 import { DiscoveryModule } from './discovery/discovery.module';
 import { EmailModule } from './email/email.module';
 import { ContactModule } from './contact/contact.module';
+import { AdminCmsModule } from './admin-cms/admin-cms.module';
+import { PaymentsModule } from './payments/payments.module';
+import { VendorReviewsModule } from './vendor-reviews/vendor-reviews.module';
+import { VendorRevenueModule } from './vendor-revenue/vendor-revenue.module';
+import { VendorDocumentsModule } from './vendor-documents/vendor-documents.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 
 @Module({
   imports: [
@@ -41,7 +47,13 @@ import { ContactModule } from './contact/contact.module';
     CustomerAccountModule,
     DiscoveryModule,
     EmailModule,
-    ContactModule
+    ContactModule,
+    AdminCmsModule,
+    PaymentsModule,
+    VendorReviewsModule,
+    VendorRevenueModule,
+    VendorDocumentsModule,
+    AdminDashboardModule
   ],
   controllers: [AppController],
   providers: [AppService],

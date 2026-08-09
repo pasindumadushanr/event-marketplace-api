@@ -74,6 +74,53 @@ export class UsersService {
     });
   }
 
+  async updateMe(id: string, data: any) {
+    const { password, ...rest } = data;
+    
+    // Check if email or phone is already taken by someone else
+    if (rest.email || rest.phone) {
+      const orConditions: any[] = [];
+      if (rest.email) orConditions.push({ email: rest.email });
+      if (rest.phone) orConditions.push({ phone: rest.phone });
+      
+      const existingUser = await this.prisma.user.findFirst({
+        where: { 
+          OR: orConditions,
+          NOT: { id }
+        },
+      });
+
+      if (existingUser) {
+        if (existingUser.email === rest.email) {
+          throw new ConflictException('Email already in use');
+        }
+        if (existingUser.phone === rest.phone) {
+          throw new ConflictException('Phone number already in use');
+        }
+      }
+    }
+
+    const updateData: any = { ...rest };
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        profileImage: true
+      }
+    });
+  }
+
   async updateRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },

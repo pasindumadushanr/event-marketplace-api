@@ -44,4 +44,19 @@ export class ContactService {
 
     return { success: true, id: submission.id, message: 'Message sent successfully.' };
   }
+
+  // Admin: Get all tickets
+  async getTickets() {
+    return (this.prisma as any).contactSubmission.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // Admin: Update ticket status
+  async updateTicketStatus(id: string, status: string) {
+    return (this.prisma as any).contactSubmission.update({
+      where: { id },
+      data: { status }
+    });
+  }
 }

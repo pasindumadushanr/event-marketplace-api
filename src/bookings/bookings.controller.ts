@@ -29,4 +29,18 @@ export class BookingsController {
   updateBookingStatus(@Request() req: any, @Param('id') id: string, @Body() data: { status: string }) {
     return this.service.updateBookingStatus(req.user.userId, id, data.status);
   }
+
+  // Admin views all bookings
+  @Get('admin')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  getAllBookings() {
+    return this.service.getAllBookings();
+  }
+
+  // Admin updates booking status
+  @Patch('admin/:id/status')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  updateBookingStatusAdmin(@Param('id') id: string, @Body() data: { status: string }) {
+    return this.service.updateBookingStatusAdmin(id, data.status);
+  }
 }
