@@ -80,7 +80,7 @@ export class BookingsService {
           select: { id: true, firstName: true, lastName: true, email: true, phone: true }
         },
         business: {
-          select: { id: true, businessName: true, vendor: { select: { email: true } } }
+          select: { id: true, name: true, vendor: { select: { email: true } } }
         },
         package: true
       },

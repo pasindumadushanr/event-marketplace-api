@@ -95,7 +95,7 @@ export class PaymentsService {
       where: { paymentStatus: 'PAID' },
       include: {
         customer: { select: { firstName: true, lastName: true, email: true } },
-        business: { select: { businessName: true } }
+        business: { select: { name: true } }
       },
       orderBy: { updatedAt: 'desc' } // Assuming it's marked PAID at updatedAt
     });

@@ -8,7 +8,7 @@ export class AdminDashboardService {
   async getStats() {
     const totalUsers = await this.prisma.user.count();
     const activeVendors = await this.prisma.business.count({
-      where: { approvalStatus: 'APPROVED' }
+      where: { vendorStatus: 'APPROVED' }
     });
     const completedBookings = await this.prisma.booking.count({
       where: { status: 'COMPLETED' }
