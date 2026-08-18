@@ -107,4 +107,160 @@ export class AdminCmsService {
   async deleteFaq(id: string) {
     return this.prisma.faq.delete({ where: { id } });
   }
+
+  // Pages
+  async getPages() {
+    return this.prisma.page.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async getPageBySlug(slug: string, publicOnly = false) {
+    const page = await this.prisma.page.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('Page not found');
+    if (publicOnly && page.status !== 'PUBLISHED') throw new NotFoundException('Page not found');
+    return page;
+  }
+
+  async createPage(data: any) {
+    return this.prisma.page.create({
+      data: {
+        title: data.title,
+        slug: data.slug,
+        content: data.content,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        status: data.status || 'DRAFT'
+      }
+    });
+  }
+
+  async updatePage(id: string, data: any) {
+    return this.prisma.page.update({
+      where: { id },
+      data: {
+        title: data.title,
+        slug: data.slug,
+        content: data.content,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        status: data.status
+      }
+    });
+  }
+
+  async deletePage(id: string) {
+    return this.prisma.page.delete({ where: { id } });
+  }
+
+  // Blog Posts
+  async getBlogPosts() {
+    return this.prisma.blogPost.findMany({
+      include: {
+        author: { select: { firstName: true, lastName: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async getPublishedBlogPosts() {
+    return this.prisma.blogPost.findMany({
+      where: { status: 'PUBLISHED' },
+      include: {
+        author: { select: { firstName: true, lastName: true, profileImage: true } }
+      },
+      orderBy: { publishedAt: 'desc' }
+    });
+  }
+
+  async getBlogPostBySlug(slug: string, publicOnly = false) {
+    const post = await this.prisma.blogPost.findUnique({
+      where: { slug },
+      include: {
+        author: { select: { firstName: true, lastName: true, profileImage: true } }
+      }
+    });
+    if (!post) throw new NotFoundException('Blog post not found');
+    if (publicOnly && post.status !== 'PUBLISHED') throw new NotFoundException('Blog post not found');
+    return post;
+  }
+
+  async createBlogPost(data: any, authorId: string, file?: Express.Multer.File) {
+    let coverImage = data.coverImage || '';
+    if (file) {
+      coverImage = await this.storage.uploadFile(file, 'blog');
+    }
+
+    const isPublished = data.status === 'PUBLISHED';
+
+    return this.prisma.blogPost.create({
+      data: {
+        title: data.title,
+        slug: data.slug,
+        excerpt: data.excerpt,
+        content: data.content,
+        coverImage,
+        authorId,
+        status: data.status || 'DRAFT',
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        publishedAt: isPublished ? new Date() : null
+      }
+    });
+  }
+
+  async updateBlogPost(id: string, data: any, file?: Express.Multer.File) {
+    const post = await this.prisma.blogPost.findUnique({ where: { id } });
+    if (!post) throw new NotFoundException('Blog post not found');
+
+    let coverImage = post.coverImage;
+    if (file) {
+      if (coverImage && coverImage.includes('cloudinary')) {
+        await this.storage.deleteFile(coverImage);
+      }
+      coverImage = await this.storage.uploadFile(file, 'blog');
+    } else if (data.coverImage !== undefined) {
+      coverImage = data.coverImage;
+    }
+
+    const isNewlyPublished = data.status === 'PUBLISHED' && post.status !== 'PUBLISHED';
+
+    return this.prisma.blogPost.update({
+      where: { id },
+      data: {
+        title: data.title,
+        slug: data.slug,
+        excerpt: data.excerpt,
+        content: data.content,
+        coverImage,
+        status: data.status,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        publishedAt: isNewlyPublished ? new Date() : undefined
+      }
+    });
+  }
+
+  async deleteBlogPost(id: string) {
+    const post = await this.prisma.blogPost.findUnique({ where: { id } });
+    if (post && post.coverImage && post.coverImage.includes('cloudinary')) {
+      await this.storage.deleteFile(post.coverImage);
+    }
+    return this.prisma.blogPost.delete({ where: { id } });
+  }
+
+  // Settings
+  async getSetting(key: string) {
+    return (this.prisma as any).siteSetting.findUnique({
+      where: { key }
+    });
+  }
+
+  async upsertSetting(key: string, value: any) {
+    return (this.prisma as any).siteSetting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value }
+    });
+  }
 }

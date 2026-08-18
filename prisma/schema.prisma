@@ -92,6 +92,7 @@ model User {
   bookingsAsCustomer Booking[]  @relation("CustomerBookings")
   reviewsAsCustomer  Review[]   @relation("CustomerReviews")
   favoriteBusinesses FavoriteBusiness[]
+  blogPosts          BlogPost[] @relation("BlogPosts")
 }
 
 model BusinessCategory {
@@ -312,4 +313,33 @@ model Faq {
   sortOrder   Int          @default(0)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+model Page {
+  id              String       @id @default(uuid()) @db.Uuid
+  slug            String       @unique
+  title           String
+  content         String       @db.Text
+  metaTitle       String?
+  metaDescription String?
+  status          ContentStatus @default(DRAFT)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model BlogPost {
+  id              String       @id @default(uuid()) @db.Uuid
+  slug            String       @unique
+  title           String
+  excerpt         String?      @db.Text
+  content         String       @db.Text
+  coverImage      String?
+  authorId        String?      @db.Uuid
+  author          User?        @relation("BlogPosts", fields: [authorId], references: [id], onDelete: SetNull)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
