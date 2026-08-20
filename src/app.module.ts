@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -25,6 +26,7 @@ import { VendorReviewsModule } from './vendor-reviews/vendor-reviews.module';
 import { VendorRevenueModule } from './vendor-revenue/vendor-revenue.module';
 import { VendorDocumentsModule } from './vendor-documents/vendor-documents.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    ScheduleModule.forRoot(),
     PrismaModule, 
     UsersModule, 
     AuthModule, 
@@ -53,7 +56,8 @@ import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
     VendorReviewsModule,
     VendorRevenueModule,
     VendorDocumentsModule,
-    AdminDashboardModule
+    AdminDashboardModule,
+    SubscriptionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

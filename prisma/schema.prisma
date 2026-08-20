@@ -93,6 +93,7 @@ model User {
   reviewsAsCustomer  Review[]   @relation("CustomerReviews")
   favoriteBusinesses FavoriteBusiness[]
   blogPosts          BlogPost[] @relation("BlogPosts")
+  vendorSubscriptions VendorSubscription[]
 }
 
 model BusinessCategory {
@@ -342,4 +343,44 @@ model BlogPost {
   metaDescription String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+}
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING_PAYMENT
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  durationDays Int
+  features    String[]
+  isActive    Boolean  @default(true)
+  
+  subscriptions VendorSubscription[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VendorSubscription {
+  id              String   @id @default(uuid()) @db.Uuid
+  vendorId        String   @db.Uuid
+  vendor          User     @relation(fields: [vendorId], references: [id])
+  planId          String   @db.Uuid
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+  
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  
+  paymentMethod   String?
+  paymentSessionId String?
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
