@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AdminApprovalsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService
+  ) {}
 
   async getApplications(status?: string) {
     return this.prisma.business.findMany({
@@ -17,13 +21,23 @@ export class AdminApprovalsService {
   }
 
   async approveApplication(id: string) {
-    const business = await this.prisma.business.findUnique({ where: { id } });
+    const business = await this.prisma.business.findUnique({ 
+      where: { id },
+      include: { vendor: true }
+    });
     if (!business) throw new NotFoundException('Application not found');
     
-    return this.prisma.business.update({
+    const updated = await this.prisma.business.update({
       where: { id },
       data: { vendorStatus: 'APPROVED', rejectionReason: null }
     });
+
+    // Send email notification to vendor asynchronously
+    if (business.vendor && business.vendor.email) {
+      this.emailService.sendVendorApprovalNotification(business.vendor.email, business.vendor.firstName).catch(console.error);
+    }
+
+    return updated;
   }
 
   async rejectApplication(id: string, reason: string) {

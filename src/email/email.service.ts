@@ -31,4 +31,9 @@ export class EmailService {
     const html = EmailTemplates.getAdminContactNotificationTemplate(name, email, message);
     return this.sendMail(adminEmail, `New Contact Inquiry from ${name}`, html);
   }
+
+  async sendVendorApprovalNotification(email: string, name: string) {
+    const html = EmailTemplates.getVendorApprovalTemplate(name);
+    return this.sendMail(email, 'Your Vendor Account is Approved! - LuxeEvents', html);
+  }
 }

@@ -17,5 +17,18 @@ export const EmailTemplates = {
         <p style="color: #475569; margin: 0;">${message}</p>
       </div>
     </div>
+  `,
+
+  getVendorApprovalTemplate: (name: string) => `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #0f172a;">Congratulations, ${name}!</h2>
+      <p style="color: #475569; line-height: 1.6;">Your vendor application for LuxeEvents has been approved by our administrative team.</p>
+      <p style="color: #475569; line-height: 1.6;">You can now log in to your Vendor Dashboard to create packages, manage bookings, and grow your business.</p>
+      <div style="margin-top: 30px;">
+        <a href="https://event-marketplace-web-woad.vercel.app/vendor" style="background-color: #D4AF37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Dashboard</a>
+      </div>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+      <p style="color: #94a3b8; font-size: 12px;">Welcome to the LuxeEvents Marketplace.</p>
+    </div>
   `
 };
