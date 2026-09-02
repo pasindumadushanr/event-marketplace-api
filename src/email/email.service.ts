@@ -41,4 +41,9 @@ export class EmailService {
     const html = EmailTemplates.getOtpVerificationTemplate(name, otp);
     return this.sendMail(email, 'Your Verification Code - LuxeEvents', html);
   }
+
+  async sendNewVendorApplicationNotification(adminEmail: string, vendorName: string, businessName: string) {
+    const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(vendorName, businessName);
+    return this.sendMail(adminEmail, 'New Vendor Application Submitted', html);
+  }
 }

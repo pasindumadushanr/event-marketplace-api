@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { VendorBusinessService } from './vendor-business.service';
 import { VendorBusinessController } from './vendor-business.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EmailModule } from '../email/email.module';
 import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storage.provider';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EmailModule],
   controllers: [VendorBusinessController],
   providers: [
     VendorBusinessService,

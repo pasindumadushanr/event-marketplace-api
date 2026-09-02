@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class VendorBusinessService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService
+  ) {}
 
   async getMyBusiness(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
@@ -28,13 +32,30 @@ export class VendorBusinessService {
     }
     
     try {
-      return await (this.prisma as any).business.create({
+      const business = await (this.prisma as any).business.create({
         data: {
           ...data,
           vendorId,
           vendorStatus: 'UNDER_REVIEW'
         }
       });
+
+      // Send email notification to admin asynchronously
+      const vendorUser = await (this.prisma as any).user.findUnique({ where: { id: vendorId } });
+      const adminRole = await (this.prisma as any).role.findFirst({ where: { name: 'SUPER_ADMIN' } });
+      
+      if (adminRole && vendorUser) {
+        const adminUser = await (this.prisma as any).user.findFirst({ where: { roleId: adminRole.id } });
+        if (adminUser && adminUser.email) {
+          this.emailService.sendNewVendorApplicationNotification(
+            adminUser.email,
+            `${vendorUser.firstName} ${vendorUser.lastName}`,
+            business.name || 'Unknown Business'
+          ).catch(console.error);
+        }
+      }
+
+      return business;
     } catch (error: any) {
       console.error('Error in submitOnboarding:', error);
       throw new BadRequestException('Failed to create business: ' + error.message);
