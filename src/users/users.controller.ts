@@ -1,15 +1,20 @@
-import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request, Post, UseInterceptors, UploadedFile, BadRequestException, Inject } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { STORAGE_PROVIDER, StorageProvider } from '../common/providers/storage.provider';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    @Inject(STORAGE_PROVIDER) private readonly storageProvider: StorageProvider
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +28,31 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   updateMe(@Request() req: any, @Body() data: any) {
     return this.usersService.updateMe(req.user.id, data);
+  }
+
+  @Post('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } }
+    }
+  })
+  async uploadAvatar(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    
+    // Upload to Cloudinary
+    const url = await this.storageProvider.uploadFile(file, 'avatars');
+    
+    // Update user record
+    return this.usersService.updateMe(req.user.id, { profileImage: url });
   }
 
   @Get('email/:email')
