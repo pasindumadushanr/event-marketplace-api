@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request, Post, UseInterceptors, UploadedFile, BadRequestException, Inject } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request, Post, UseInterceptors, UploadedFile, BadRequestException, Inject, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -60,6 +60,12 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   findByEmail(@Param('email') email: string) {
     return this.usersService.findByEmail(email);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  async deleteMe(@Request() req: any) {
+    return this.usersService.deleteAccount(req.user.id);
   }
 
   @Get(':id')

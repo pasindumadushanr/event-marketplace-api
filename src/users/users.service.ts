@@ -134,4 +134,22 @@ export class UsersService {
       data,
     });
   }
+
+  async deleteAccount(userId: string) {
+    // Delete favorite businesses first (has cascade but safe to be explicit)
+    await this.prisma.favoriteBusiness.deleteMany({
+      where: { customerId: userId }
+    });
+    
+    // For customers testing this, it's mostly safe to just delete the user record
+    // If they have bookings/businesses, we catch the foreign key error
+    try {
+      await this.prisma.user.delete({
+        where: { id: userId }
+      });
+      return { success: true };
+    } catch (error) {
+      throw new ConflictException('Cannot delete account because it has active bookings or businesses attached.');
+    }
+  }
 }
