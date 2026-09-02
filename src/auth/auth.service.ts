@@ -49,7 +49,58 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateTokens(user.id, user.email, (user as any).role.name, user.firstName, user.lastName);
+    const roleName = (user as any).role.name;
+
+    if (roleName === 'ADMIN' || roleName === 'SUPER_ADMIN') {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 15);
+
+      await this.usersService.updateUser(user.id, {
+        emailVerificationOtp: otp,
+        emailVerificationOtpExpiry: expiry,
+      });
+
+      await this.emailService.sendOtpEmail(user.email, user.firstName, otp);
+
+      return {
+        requiresOtp: true,
+        userId: user.id,
+        message: 'OTP sent to admin email.'
+      };
+    }
+
+    return this.generateTokens(user.id, user.email, roleName, user.firstName, user.lastName);
+  }
+
+  async verifyAdminLoginOtp(userId: string, otp: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new BadRequestException('User not found');
+
+    const roleName = (user as any).role.name;
+    if (roleName !== 'ADMIN' && roleName !== 'SUPER_ADMIN') {
+      throw new BadRequestException('Invalid role for admin login');
+    }
+
+    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('No OTP requested');
+    }
+
+    if (new Date() > user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    if (user.emailVerificationOtp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    // Clear OTP
+    await this.usersService.updateUser(userId, {
+      emailVerificationOtp: null,
+      emailVerificationOtpExpiry: null,
+    });
+
+    return this.generateTokens(user.id, user.email, roleName, user.firstName, user.lastName);
   }
 
   async generateTokens(userId: string, email: string, roleName: string, firstName: string, lastName: string) {

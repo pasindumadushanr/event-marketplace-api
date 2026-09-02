@@ -52,6 +52,13 @@ export class AuthController {
     return this.authService.verifyEmailOtp(user.id, otp);
   }
 
+  @Post('verify-admin-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify Admin Login OTP' })
+  verifyAdminLoginOtp(@Body('userId') userId: string, @Body('otp') otp: string) {
+    return this.authService.verifyAdminLoginOtp(userId, otp);
+  }
+
   @Get('google')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Initiate Google OAuth Login' })
