@@ -17,6 +17,9 @@ export class SmtpEmailProvider implements IEmailProvider {
         user: this.configService.get<string>('SMTP_USER'),
         pass: this.configService.get<string>('SMTP_PASS'),
       },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 5000,    // 5 seconds
+      socketTimeout: 15000,     // 15 seconds
     });
 
     // Verify connection configuration
