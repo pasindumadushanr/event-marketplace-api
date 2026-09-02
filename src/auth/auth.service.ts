@@ -97,13 +97,16 @@ export class AuthService {
         profileImage: profile.profileImage,
         authProvider: 'google',
         googleId: profile.googleId,
+        emailVerified: true,
         role: { connect: { id: customerRole.id } },
       });
-    } else if (!user.googleId) {
-      // Link Google account to existing local account
-      // Note: We need a direct Prisma update here since UsersService doesn't have an update method yet,
-      // but to keep it simple, we'll assume UsersService needs an update method or we can just return the user
-      // Ideally, we'd update googleId in the DB.
+    } else if (!user.googleId || !user.emailVerified) {
+      // Link Google account and mark email as verified since Google verified it
+      user = await this.usersService.updateUser(user.id, {
+        googleId: profile.googleId,
+        authProvider: 'google',
+        emailVerified: true,
+      });
     }
 
     return user;
