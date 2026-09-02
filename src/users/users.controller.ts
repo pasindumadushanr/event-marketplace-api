@@ -5,7 +5,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
 import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
-import { STORAGE_PROVIDER, StorageProvider } from '../common/providers/storage.provider';
+import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
+import type { StorageProvider } from '../common/providers/storage.provider';
 
 @ApiTags('users')
 @ApiBearerAuth()
