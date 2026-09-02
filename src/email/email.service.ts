@@ -36,4 +36,9 @@ export class EmailService {
     const html = EmailTemplates.getVendorApprovalTemplate(name);
     return this.sendMail(email, 'Your Vendor Account is Approved! - LuxeEvents', html);
   }
+
+  async sendOtpEmail(email: string, name: string, otp: string) {
+    const html = EmailTemplates.getOtpVerificationTemplate(name, otp);
+    return this.sendMail(email, 'Your Verification Code - LuxeEvents', html);
+  }
 }

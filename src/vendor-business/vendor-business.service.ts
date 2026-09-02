@@ -42,15 +42,27 @@ export class VendorBusinessService {
   }
 
   async getOnboardingStatus(vendorId: string) {
+    const user = await (this.prisma as any).user.findUnique({
+      where: { id: vendorId },
+      select: { emailVerified: true }
+    });
+
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
       select: { vendorStatus: true, rejectionReason: true }
     });
     
     if (!business) {
-      return { vendorStatus: 'NOT_STARTED' };
+      return { 
+        vendorStatus: 'NOT_STARTED',
+        emailVerified: user?.emailVerified || false 
+      };
     }
-    return business;
+    
+    return {
+      ...business,
+      emailVerified: user?.emailVerified || false
+    };
   }
 
   async updateMyBusiness(vendorId: string, data: any) {

@@ -82,18 +82,20 @@ model User {
   googleId           String?    @unique
   profileImage       String?
   status             UserStatus @default(ACTIVE)
-  emailVerified      Boolean    @default(false)
-  hashedRefreshToken String?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  roleId             String     @db.Uuid
-  role               Role       @relation(fields: [roleId], references: [id])
-  businesses         Business[]
-  bookingsAsCustomer Booking[]  @relation("CustomerBookings")
-  reviewsAsCustomer  Review[]   @relation("CustomerReviews")
-  favoriteBusinesses FavoriteBusiness[]
-  blogPosts          BlogPost[] @relation("BlogPosts")
-  vendorSubscriptions VendorSubscription[]
+  emailVerified              Boolean    @default(false)
+  emailVerificationOtp       String?
+  emailVerificationOtpExpiry DateTime?
+  hashedRefreshToken         String?
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
+  roleId                     String     @db.Uuid
+  role                       Role       @relation(fields: [roleId], references: [id])
+  businesses                 Business[]
+  bookingsAsCustomer         Booking[]  @relation("CustomerBookings")
+  reviewsAsCustomer          Review[]   @relation("CustomerReviews")
+  favoriteBusinesses         FavoriteBusiness[]
+  blogPosts                  BlogPost[] @relation("BlogPosts")
+  vendorSubscriptions        VendorSubscription[]
 }
 
 model BusinessCategory {

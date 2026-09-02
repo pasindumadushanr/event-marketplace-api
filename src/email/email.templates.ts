@@ -30,5 +30,19 @@ export const EmailTemplates = {
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
       <p style="color: #94a3b8; font-size: 12px;">Welcome to the LuxeEvents Marketplace.</p>
     </div>
+  `,
+
+  getOtpVerificationTemplate: (name: string, otp: string) => `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #0f172a;">Verify your email address</h2>
+      <p style="color: #475569; line-height: 1.6;">Hi ${name},</p>
+      <p style="color: #475569; line-height: 1.6;">Thank you for registering at LuxeEvents. Please use the following 6-digit code to verify your email address. This code will expire in 15 minutes.</p>
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0f172a;">${otp}</span>
+      </div>
+      <p style="color: #475569; line-height: 1.6;">If you did not request this, please ignore this email.</p>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+      <p style="color: #94a3b8; font-size: 12px;">LuxeEvents Security Team</p>
+    </div>
   `
 };

@@ -34,6 +34,24 @@ export class AuthController {
     return this.authService.logout(user.id);
   }
 
+  @Post('send-verification-otp')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send email verification OTP' })
+  sendVerificationOtp(@CurrentUser() user: any) {
+    return this.authService.sendVerificationOtp(user.id);
+  }
+
+  @Post('verify-email-otp')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email with OTP' })
+  verifyEmailOtp(@CurrentUser() user: any, @Body('otp') otp: string) {
+    return this.authService.verifyEmailOtp(user.id, otp);
+  }
+
   @Get('google')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Initiate Google OAuth Login' })

@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { RolesService } from '../roles/roles.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private rolesService: RolesService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -105,5 +107,53 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async sendVerificationOtp(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new BadRequestException('User not found');
+    if (user.emailVerified) throw new BadRequestException('Email already verified');
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry to 15 mins from now
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 15);
+
+    await this.usersService.updateUser(userId, {
+      emailVerificationOtp: otp,
+      emailVerificationOtpExpiry: expiry,
+    });
+
+    // Send Email
+    await this.emailService.sendOtpEmail(user.email, user.firstName, otp);
+
+    return { message: 'OTP sent successfully' };
+  }
+
+  async verifyEmailOtp(userId: string, otp: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new BadRequestException('User not found');
+
+    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('No OTP requested');
+    }
+
+    if (new Date() > user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    if (user.emailVerificationOtp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    await this.usersService.updateUser(userId, {
+      emailVerified: true,
+      emailVerificationOtp: null,
+      emailVerificationOtpExpiry: null,
+    });
+
+    return { message: 'Email verified successfully' };
   }
 }
