@@ -43,6 +43,31 @@ export class SubscriptionsService {
   // VENDOR SUBSCRIPTION MANAGEMENT
   // ==============================
 
+  async grantFreeSubscription(vendorId: string, planId: string) {
+    const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan not found');
+
+    const startDate = new Date();
+    const endDate = addDays(startDate, plan.durationDays);
+
+    // Cancel existing active ones
+    await this.prisma.vendorSubscription.updateMany({
+      where: { vendorId, status: 'ACTIVE' },
+      data: { status: 'EXPIRED' }
+    });
+
+    return this.prisma.vendorSubscription.create({
+      data: {
+        vendorId,
+        planId,
+        startDate,
+        endDate,
+        status: 'ACTIVE',
+      },
+      include: { plan: true }
+    });
+  }
+
   async getCurrentSubscription(vendorId: string) {
     return this.prisma.vendorSubscription.findFirst({
       where: { vendorId, status: 'ACTIVE' },

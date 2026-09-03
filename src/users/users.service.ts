@@ -63,7 +63,13 @@ export class UsersService {
           name: { in: roles }
         }
       } : undefined,
-      include: { role: true },
+      include: { 
+        role: true,
+        vendorSubscriptions: {
+          orderBy: { endDate: 'desc' },
+          take: 1
+        }
+      },
     });
   }
 

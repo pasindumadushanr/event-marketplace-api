@@ -42,4 +42,13 @@ export class SubscriptionsController {
   getAllVendorSubscriptions() {
     return this.subscriptionsService.getAllVendorSubscriptions();
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('vendors/:vendorId/grant-free')
+  grantFreeSubscription(
+    @Param('vendorId') vendorId: string, 
+    @Body('planId') planId: string
+  ) {
+    return this.subscriptionsService.grantFreeSubscription(vendorId, planId);
+  }
 }
