@@ -24,13 +24,14 @@ export class DiscoveryService {
     // Build the dynamic WHERE clause
     const where: Prisma.BusinessWhereInput = {
       status: 'ACTIVE', // Only show active businesses
-      vendor: {
-        vendorSubscriptions: {
-          some: {
-            status: 'ACTIVE'
-          }
-        }
-      }
+      // Temporarily disabling subscription check for MVP testing
+      // vendor: {
+      //   vendorSubscriptions: {
+      //     some: {
+      //       status: 'ACTIVE'
+      //     }
+      //   }
+      // }
     };
 
     if (q) {
@@ -139,8 +140,7 @@ export class DiscoveryService {
       business = await (this.prisma as any).business.findFirst({
         where: { 
           id: identifier, 
-          status: 'ACTIVE',
-          vendor: { vendorSubscriptions: { some: { status: 'ACTIVE' } } }
+          status: 'ACTIVE'
         },
         include: {
           category: { select: { name: true, id: true } },
@@ -156,8 +156,7 @@ export class DiscoveryService {
       // Fallback for SEO Slug search
       const allActive = await (this.prisma as any).business.findMany({
         where: { 
-          status: 'ACTIVE',
-          vendor: { vendorSubscriptions: { some: { status: 'ACTIVE' } } }
+          status: 'ACTIVE'
         },
         include: {
           category: { select: { name: true, id: true } },
