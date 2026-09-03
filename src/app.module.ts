@@ -27,6 +27,7 @@ import { VendorRevenueModule } from './vendor-revenue/vendor-revenue.module';
 import { VendorDocumentsModule } from './vendor-documents/vendor-documents.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -57,7 +58,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     VendorRevenueModule,
     VendorDocumentsModule,
     AdminDashboardModule,
-    SubscriptionsModule
+    SubscriptionsModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [AppService],

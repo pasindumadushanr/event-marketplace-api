@@ -96,6 +96,10 @@ model User {
   favoriteBusinesses         FavoriteBusiness[]
   blogPosts                  BlogPost[] @relation("BlogPosts")
   vendorSubscriptions        VendorSubscription[]
+
+  // Chat Relations
+  messagesSent    Message[]      @relation("SentMessages")
+  conversationsAsCustomer Conversation[] @relation("CustomerConversations")
 }
 
 model BusinessCategory {
@@ -163,6 +167,7 @@ model Business {
   documents          Document[]
   contentSections    BusinessContentSection[]
   favoritedBy        FavoriteBusiness[]
+  conversations      Conversation[] @relation("BusinessConversations")
   
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -385,4 +390,38 @@ model VendorSubscription {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Conversation {
+  id          String    @id @default(uuid()) @db.Uuid
+  
+  customerId  String    @db.Uuid
+  customer    User      @relation("CustomerConversations", fields: [customerId], references: [id])
+  
+  businessId  String    @db.Uuid
+  business    Business  @relation("BusinessConversations", fields: [businessId], references: [id], onDelete: Cascade)
+  
+  messages    Message[]
+  
+  lastMessageAt DateTime @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([customerId, businessId])
+}
+
+model Message {
+  id              String       @id @default(uuid()) @db.Uuid
+  
+  conversationId  String       @db.Uuid
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId        String       @db.Uuid
+  sender          User         @relation("SentMessages", fields: [senderId], references: [id])
+  
+  content         String       @db.Text
+  isRead          Boolean      @default(false)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
