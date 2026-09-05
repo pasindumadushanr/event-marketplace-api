@@ -25,7 +25,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
         (error, result) => {
           if (error) {
             this.logger.error('Cloudinary Upload Error', error);
-            return reject(new InternalServerErrorException('Failed to upload file to Cloudinary'));
+            return reject(new InternalServerErrorException(`Failed to upload file to Cloudinary: ${error.message || JSON.stringify(error)}`));
           }
           if (result && result.secure_url) {
             resolve(result.secure_url);
