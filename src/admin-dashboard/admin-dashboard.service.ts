@@ -15,7 +15,7 @@ export class AdminDashboardService {
     });
     
     // Revenue from completed bookings (ONLY FOR SUPER_ADMIN)
-    let platformRevenue = null;
+    let platformRevenue: number | null = null;
     if (roleName === 'SUPER_ADMIN') {
       const bookings = await this.prisma.booking.findMany({
         where: { status: 'COMPLETED' } // Or PAID
