@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStats() {
+  async getStats(roleName: string) {
     const totalUsers = await this.prisma.user.count();
     const activeVendors = await this.prisma.business.count({
       where: { vendorStatus: 'APPROVED' }
@@ -14,13 +14,15 @@ export class AdminDashboardService {
       where: { status: 'COMPLETED' }
     });
     
-    // Revenue from completed bookings
-    const bookings = await this.prisma.booking.findMany({
-      where: { status: 'COMPLETED' } // Or PAID
-    });
-    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
-    // Platform cut is 10%
-    const platformRevenue = totalRevenue * 0.10;
+    // Revenue from completed bookings (ONLY FOR SUPER_ADMIN)
+    let platformRevenue = null;
+    if (roleName === 'SUPER_ADMIN') {
+      const bookings = await this.prisma.booking.findMany({
+        where: { status: 'COMPLETED' } // Or PAID
+      });
+      const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
+      platformRevenue = totalRevenue * 0.10; // Platform cut is 10%
+    }
 
     // Get 6 months chart data for user growth
     const sixMonthsAgo = new Date();
@@ -62,7 +64,7 @@ export class AdminDashboardService {
       totalUsers,
       activeVendors,
       completedBookings,
-      platformRevenue,
+      platformRevenue, // null for ADMIN
       chartData,
       recentSignups
     };

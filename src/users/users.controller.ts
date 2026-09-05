@@ -103,7 +103,7 @@ export class UsersController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Roles('SUPER_ADMIN')
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.usersService.updateStatus(id, status);
   }
