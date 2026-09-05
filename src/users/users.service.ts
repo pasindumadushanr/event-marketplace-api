@@ -65,11 +65,13 @@ export class UsersService {
       } : undefined,
       include: { 
         role: true,
+        businesses: { select: { createdAt: true } },
         vendorSubscriptions: {
           orderBy: { endDate: 'desc' },
           take: 1
         }
       },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
