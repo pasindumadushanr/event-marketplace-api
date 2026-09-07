@@ -46,4 +46,9 @@ export class EmailService {
     const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(vendorName, businessName);
     return this.sendMail(adminEmail, 'New Vendor Application Submitted', html);
   }
+
+  async sendNewMessageNotification(email: string, recipientName: string, senderName: string, messagePreview: string) {
+    const html = EmailTemplates.getNewMessageNotificationTemplate(recipientName, senderName, messagePreview);
+    return this.sendMail(email, `New Message from ${senderName}`, html);
+  }
 }

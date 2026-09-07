@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService
+  ) {}
 
   // Fetch all conversations for a user
   async getUserConversations(userId: string, roleName: string) {
@@ -102,10 +106,32 @@ export class ChatService {
       },
     });
 
-    await this.prisma.conversation.update({
+    const conversation = await this.prisma.conversation.update({
       where: { id: conversationId },
       data: { lastMessageAt: new Date() },
+      include: {
+        customer: true,
+        business: {
+          include: { vendor: true }
+        }
+      }
     });
+
+    // Check if customer is sending a message to the vendor
+    if (senderId === conversation.customerId) {
+      const profileSettings = conversation.business.profileSettings as any;
+      // Default to true if not explicitly set to false
+      const shouldEmail = profileSettings?.emailNotifications?.messages !== false;
+      
+      if (shouldEmail) {
+        this.emailService.sendNewMessageNotification(
+          conversation.business.vendor.email,
+          conversation.business.vendor.firstName,
+          conversation.customer.firstName,
+          content
+        );
+      }
+    }
 
     return message;
   }

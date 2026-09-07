@@ -60,5 +60,20 @@ export const EmailTemplates = {
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
       <p style="color: #94a3b8; font-size: 12px;">Automated Admin Notification</p>
     </div>
+  `,
+
+  getNewMessageNotificationTemplate: (recipientName: string, senderName: string, messagePreview: string) => `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #0f172a;">New Message from ${senderName}</h2>
+      <p style="color: #475569; line-height: 1.6;">Hi ${recipientName}, you have received a new message on LuxeEvents.</p>
+      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 15px; font-style: italic;">
+        <p style="color: #475569; margin: 0;">"${messagePreview}"</p>
+      </div>
+      <div style="margin-top: 30px;">
+        <a href="https://event-marketplace-web-woad.vercel.app/vendor/messages" style="background-color: #D4AF37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reply Now</a>
+      </div>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+      <p style="color: #94a3b8; font-size: 12px;">To stop receiving these emails, update your email notification settings in your Vendor Dashboard.</p>
+    </div>
   `
 };

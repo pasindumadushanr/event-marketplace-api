@@ -5,9 +5,12 @@ import { ChatGateway } from './chat.gateway';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 
+import { EmailModule } from '../email/email.module';
+
 @Module({
   imports: [
     PrismaModule,
+    EmailModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback_secret',
       signOptions: { expiresIn: '1d' },
