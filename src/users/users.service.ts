@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -127,6 +127,40 @@ export class UsersService {
         profileImage: true
       }
     });
+  }
+
+  async updatePassword(id: string, currentPassword?: string, newPassword?: string) {
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Current and new password are required');
+    }
+    
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user || !user.password) {
+      throw new BadRequestException('Invalid user or password not set');
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    return { message: 'Password updated successfully' };
+  }
+
+  async logoutAllDevices(id: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { hashedRefreshToken: null }
+    });
+    return { message: 'Logged out of all devices successfully' };
   }
 
   async updateRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {

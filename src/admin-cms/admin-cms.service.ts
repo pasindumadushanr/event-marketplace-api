@@ -251,12 +251,18 @@ export class AdminCmsService {
 
   // Settings
   async getSetting(key: string) {
-    // Temporary mock since SiteSetting model does not exist in schema yet
-    return null;
+    const setting = await this.prisma.setting.findUnique({
+      where: { key }
+    });
+    return setting ? setting.value : null;
   }
 
   async upsertSetting(key: string, value: any) {
-    // Temporary mock
-    return { key, value };
+    const setting = await this.prisma.setting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value }
+    });
+    return setting.value;
   }
 }

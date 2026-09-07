@@ -58,6 +58,18 @@ export class UsersController {
     return this.usersService.updateMe(req.user.id, data);
   }
 
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  updatePassword(@Request() req: any, @Body() data: any) {
+    return this.usersService.updatePassword(req.user.id, data.currentPassword, data.newPassword);
+  }
+
+  @Post('me/logout-all')
+  @UseGuards(JwtAuthGuard)
+  logoutAll(@Request() req: any) {
+    return this.usersService.logoutAllDevices(req.user.id);
+  }
+
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))

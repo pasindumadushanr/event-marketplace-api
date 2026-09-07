@@ -28,6 +28,8 @@ import { VendorDocumentsModule } from './vendor-documents/vendor-documents.modul
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ChatModule } from './chat/chat.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PackageTemplatesModule } from './package-templates/package-templates.module';
 
 @Module({
   imports: [
@@ -59,7 +61,9 @@ import { ChatModule } from './chat/chat.module';
     VendorDocumentsModule,
     AdminDashboardModule,
     SubscriptionsModule,
-    ChatModule
+    ChatModule,
+    NotificationsModule,
+    PackageTemplatesModule
   ],
   controllers: [AppController],
   providers: [AppService],

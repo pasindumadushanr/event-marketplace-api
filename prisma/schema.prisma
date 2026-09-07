@@ -100,6 +100,7 @@ model User {
   // Chat Relations
   messagesSent    Message[]      @relation("SentMessages")
   conversationsAsCustomer Conversation[] @relation("CustomerConversations")
+  notifications   Notification[]
 }
 
 model BusinessCategory {
@@ -424,4 +425,39 @@ model Message {
   
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+}
+
+// --- NEW PHASE 2 ADMIN MODELS ---
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  
+  // A notification can belong to a specific user, or be a global broadcast if userId is null
+  userId    String?  @db.Uuid
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Target roles (e.g. 'VENDOR', 'CUSTOMER') for broadcasts
+  targetRole String? 
+  
+  createdAt DateTime @default(now())
+}
+
+model PackageTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  features    String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
