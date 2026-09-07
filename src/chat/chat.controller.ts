@@ -10,21 +10,21 @@ export class ChatController {
 
   @Get('conversations')
   getConversations(@Req() req) {
-    return this.chatService.getUserConversations(req.user.userId, req.user.roleName);
+    return this.chatService.getUserConversations(req.user.id, req.user.role?.name);
   }
 
   @Post('conversations')
   getOrCreateConversation(@Req() req, @Body() body: { businessId: string }) {
-    return this.chatService.getOrCreateConversation(req.user.userId, body.businessId);
+    return this.chatService.getOrCreateConversation(req.user.id, body.businessId);
   }
 
   @Get('conversations/:id/messages')
   getMessages(@Req() req, @Param('id') conversationId: string) {
-    return this.chatService.getMessages(conversationId, req.user.userId, req.user.roleName);
+    return this.chatService.getMessages(conversationId, req.user.id, req.user.role?.name);
   }
   
   @Post('conversations/:id/read')
   markAsRead(@Req() req, @Param('id') conversationId: string) {
-    return this.chatService.markAsRead(conversationId, req.user.userId);
+    return this.chatService.markAsRead(conversationId, req.user.id);
   }
 }

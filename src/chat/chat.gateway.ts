@@ -37,8 +37,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.user = payload;
       
       // Join a personal room for direct user-based notifications
-      client.join(`user_${payload.userId}`);
-      console.log(`User ${payload.userId} connected to chat`);
+      client.join(`user_${payload.sub}`);
+      console.log(`User ${payload.sub} connected to chat`);
     } catch (error) {
       console.log('WS Connection error:', error.message);
       client.disconnect();
@@ -46,7 +46,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`User ${client.data?.user?.userId} disconnected from chat`);
+    console.log(`User ${client.data?.user?.sub} disconnected from chat`);
   }
 
   @SubscribeMessage('join_conversation')
@@ -73,7 +73,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string; content: string },
   ) {
-    const userId = client.data.user.userId;
+    const userId = client.data.user.sub;
     
     // Save to database
     const message = await this.chatService.saveMessage(
