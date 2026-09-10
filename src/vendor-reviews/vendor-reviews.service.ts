@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -8,7 +12,7 @@ export class VendorReviewsService {
   async getVendorReviews(vendorId: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -19,17 +23,22 @@ export class VendorReviewsService {
       where: { businessId: business.id },
       include: {
         customer: {
-          select: { id: true, firstName: true, lastName: true, profileImage: true }
-        }
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async replyToReview(vendorId: string, reviewId: string, reply: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -37,7 +46,7 @@ export class VendorReviewsService {
     }
 
     const review = await this.prisma.review.findUnique({
-      where: { id: reviewId }
+      where: { id: reviewId },
     });
 
     if (!review) {
@@ -50,7 +59,7 @@ export class VendorReviewsService {
 
     return this.prisma.review.update({
       where: { id: reviewId },
-      data: { reply }
+      data: { reply },
     });
   }
 }

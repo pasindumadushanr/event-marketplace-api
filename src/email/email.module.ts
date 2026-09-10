@@ -14,7 +14,8 @@ import { ResendEmailProvider } from './providers/resend-email.provider';
       useFactory: (configService: ConfigService) => {
         const provider = configService.get<string>('SMTP_PROVIDER', 'mock');
         if (provider === 'smtp') return new SmtpEmailProvider(configService);
-        if (provider === 'resend') return new ResendEmailProvider(configService);
+        if (provider === 'resend')
+          return new ResendEmailProvider(configService);
         return new MockEmailProvider();
       },
       inject: [ConfigService],

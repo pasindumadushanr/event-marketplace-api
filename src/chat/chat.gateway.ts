@@ -27,15 +27,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth.token?.split(' ')[1] || client.handshake.headers.authorization?.split(' ')[1];
+      const token =
+        client.handshake.auth.token?.split(' ')[1] ||
+        client.handshake.headers.authorization?.split(' ')[1];
       if (!token) {
         client.disconnect();
         return;
       }
-      
+
       const payload = this.jwtService.verify(token);
       client.data.user = payload;
-      
+
       // Join a personal room for direct user-based notifications
       client.join(`user_${payload.sub}`);
       console.log(`User ${payload.sub} connected to chat`);
@@ -74,7 +76,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string; content: string },
   ) {
     const userId = client.data.user.sub;
-    
+
     // Save to database
     const message = await this.chatService.saveMessage(
       data.conversationId,
@@ -83,12 +85,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     // Broadcast to everyone in the conversation room (including sender to confirm delivery)
-    this.server.to(`conversation_${data.conversationId}`).emit('receive_message', message);
-    
+    this.server
+      .to(`conversation_${data.conversationId}`)
+      .emit('receive_message', message);
+
     // Also we might want to emit a notification event to the specific recipient's personal room
     // For that, we would need to know the recipient's ID, which we could fetch from the conversation
     // but the frontend can also just listen to 'receive_message' if they are in the conversation room.
-    
+
     return message;
   }
 }

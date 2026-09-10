@@ -9,7 +9,9 @@ describe('PackageTemplatesController', () => {
       controllers: [PackageTemplatesController],
     }).compile();
 
-    controller = module.get<PackageTemplatesController>(PackageTemplatesController);
+    controller = module.get<PackageTemplatesController>(
+      PackageTemplatesController,
+    );
   });
 
   it('should be defined', () => {

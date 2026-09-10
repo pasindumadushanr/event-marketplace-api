@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -10,8 +14,8 @@ export class BusinessCategoriesService {
     return (this.prisma as any).businessCategory.findMany({
       orderBy: { sortOrder: 'asc' },
       include: {
-        _count: { select: { businesses: true } }
-      }
+        _count: { select: { businesses: true } },
+      },
     });
   }
 
@@ -25,7 +29,8 @@ export class BusinessCategoriesService {
     const existing = await (this.prisma as any).businessCategory.findUnique({
       where: { slug: data.slug },
     });
-    if (existing) throw new ConflictException('Category with this slug already exists');
+    if (existing)
+      throw new ConflictException('Category with this slug already exists');
 
     return (this.prisma as any).businessCategory.create({ data });
   }
@@ -47,11 +52,13 @@ export class BusinessCategoriesService {
   async delete(id: string) {
     const category = await (this.prisma as any).businessCategory.findUnique({
       where: { id },
-      include: { _count: { select: { businesses: true } } }
+      include: { _count: { select: { businesses: true } } },
     });
 
     if (category && category._count.businesses > 0) {
-      throw new BadRequestException('Cannot delete category because it is assigned to businesses. Please deactivate it instead.');
+      throw new BadRequestException(
+        'Cannot delete category because it is assigned to businesses. Please deactivate it instead.',
+      );
     }
 
     return (this.prisma as any).businessCategory.delete({

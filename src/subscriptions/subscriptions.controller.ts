@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -53,9 +62,12 @@ export class SubscriptionsController {
   @Roles('SUPER_ADMIN')
   @Post('vendors/:vendorId/grant-free')
   grantFreeSubscription(
-    @Param('vendorId') vendorId: string, 
-    @Body() body: GrantFreeDto
+    @Param('vendorId') vendorId: string,
+    @Body() body: GrantFreeDto,
   ) {
-    return this.subscriptionsService.grantFreeSubscription(vendorId, body.planId);
+    return this.subscriptionsService.grantFreeSubscription(
+      vendorId,
+      body.planId,
+    );
   }
 }

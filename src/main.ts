@@ -6,11 +6,16 @@ import * as dns from 'dns';
 
 async function bootstrap() {
   dns.setDefaultResultOrder('ipv4first');
-  
+
+  if (!process.env.JWT_SECRET) {
+    console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start.');
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

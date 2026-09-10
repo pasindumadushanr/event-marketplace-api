@@ -9,7 +9,7 @@ export class UserEntity implements User {
   email: string;
   @ApiPropertyOptional()
   phone: string | null;
-  
+
   @Exclude()
   password: string | null;
 
@@ -18,17 +18,17 @@ export class UserEntity implements User {
 
   @ApiPropertyOptional()
   googleId: string | null;
-  
+
   @ApiPropertyOptional()
   profileImage: string | null;
   status: any;
   emailVerified: boolean;
   emailVerificationOtp: string | null;
   emailVerificationOtpExpiry: Date | null;
-  
+
   @Exclude()
   hashedRefreshToken: string | null;
-  
+
   createdAt: Date;
   updatedAt: Date;
   roleId: string;

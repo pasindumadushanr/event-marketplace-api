@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -15,7 +24,10 @@ export class NotificationsController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   getMyNotifications(@Request() req: any) {
-    return this.notificationsService.getUserNotifications(req.user.id, req.user.roleName);
+    return this.notificationsService.getUserNotifications(
+      req.user.id,
+      req.user.roleName,
+    );
   }
 
   @Patch(':id/read')
@@ -35,7 +47,15 @@ export class NotificationsController {
   @Post('admin/broadcast')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
-  createBroadcast(@Body() data: { title: string; message: string; targetRole?: string; userId?: string }) {
+  createBroadcast(
+    @Body()
+    data: {
+      title: string;
+      message: string;
+      targetRole?: string;
+      userId?: string;
+    },
+  ) {
     return this.notificationsService.createBroadcast(data);
   }
 }

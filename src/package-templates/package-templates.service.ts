@@ -12,7 +12,7 @@ export class PackageTemplatesService {
 
   async findAll() {
     return this.prisma.packageTemplate.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -23,13 +23,13 @@ export class PackageTemplatesService {
   async update(id: string, data: Prisma.PackageTemplateUpdateInput) {
     return this.prisma.packageTemplate.update({
       where: { id },
-      data
+      data,
     });
   }
 
   async remove(id: string) {
     return this.prisma.packageTemplate.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

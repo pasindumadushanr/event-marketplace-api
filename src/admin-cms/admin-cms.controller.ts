@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Request, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Request,
+  NotFoundException,
+} from '@nestjs/common';
 import { AdminCmsService } from './admin-cms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -34,7 +47,11 @@ export class AdminCmsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('image'))
-  updateBanner(@Param('id') id: string, @Body() body: any, @UploadedFile() file: Express.Multer.File) {
+  updateBanner(
+    @Param('id') id: string,
+    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     return this.service.updateBanner(id, body, file);
   }
 
@@ -115,7 +132,6 @@ export class AdminCmsController {
     return this.service.getPageBySlug(slug, false);
   }
 
-
   // Blog Posts (Admin)
   @Get('blog')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -128,7 +144,11 @@ export class AdminCmsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('coverImage'))
-  createBlogPost(@Body() body: any, @UploadedFile() file: Express.Multer.File, @Request() req: any) {
+  createBlogPost(
+    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
     return this.service.createBlogPost(body, req.user.userId, file);
   }
 
@@ -136,7 +156,11 @@ export class AdminCmsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('coverImage'))
-  updateBlogPost(@Param('id') id: string, @Body() body: any, @UploadedFile() file: Express.Multer.File) {
+  updateBlogPost(
+    @Param('id') id: string,
+    @Body() body: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     return this.service.updateBlogPost(id, body, file);
   }
 

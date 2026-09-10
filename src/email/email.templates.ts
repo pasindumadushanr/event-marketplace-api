@@ -8,8 +8,12 @@ export const EmailTemplates = {
       <p style="color: #94a3b8; font-size: 12px;">This is an automated message from LuxeEvents.</p>
     </div>
   `,
-  
-  getAdminContactNotificationTemplate: (name: string, email: string, message: string) => `
+
+  getAdminContactNotificationTemplate: (
+    name: string,
+    email: string,
+    message: string,
+  ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">New Contact Inquiry</h2>
       <p><strong>From:</strong> ${name} (${email})</p>
@@ -46,7 +50,10 @@ export const EmailTemplates = {
     </div>
   `,
 
-  getNewVendorApplicationNotificationTemplate: (vendorName: string, businessName: string) => `
+  getNewVendorApplicationNotificationTemplate: (
+    vendorName: string,
+    businessName: string,
+  ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">New Vendor Application</h2>
       <p style="color: #475569; line-height: 1.6;">A new vendor has submitted their business application and is waiting for your review.</p>
@@ -62,7 +69,11 @@ export const EmailTemplates = {
     </div>
   `,
 
-  getNewMessageNotificationTemplate: (recipientName: string, senderName: string, messagePreview: string) => `
+  getNewMessageNotificationTemplate: (
+    recipientName: string,
+    senderName: string,
+    messagePreview: string,
+  ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">New Message from ${senderName}</h2>
       <p style="color: #475569; line-height: 1.6;">Hi ${recipientName}, you have received a new message on LuxeEvents.</p>
@@ -75,5 +86,5 @@ export const EmailTemplates = {
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
       <p style="color: #94a3b8; font-size: 12px;">To stop receiving these emails, update your email notification settings in your Vendor Dashboard.</p>
     </div>
-  `
+  `,
 };

@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { VendorPackagesService } from './vendor-packages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -21,7 +31,11 @@ export class VendorPackagesController {
   }
 
   @Patch(':id')
-  updatePackage(@Request() req: any, @Param('id') id: string, @Body() data: any) {
+  updatePackage(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
     return this.service.updatePackage(req.user.userId, id, data);
   }
 

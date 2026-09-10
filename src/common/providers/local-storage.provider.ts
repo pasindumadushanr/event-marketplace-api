@@ -14,7 +14,10 @@ export class LocalStorageProvider implements StorageProvider {
     }
   }
 
-  async uploadFile(file: Express.Multer.File, folder: string = 'general'): Promise<string> {
+  async uploadFile(
+    file: Express.Multer.File,
+    folder: string = 'general',
+  ): Promise<string> {
     try {
       const folderPath = path.join(this.uploadDir, folder);
       if (!fs.existsSync(folderPath)) {
@@ -40,7 +43,7 @@ export class LocalStorageProvider implements StorageProvider {
       if (!fileUrl.startsWith('/uploads/')) return;
       const relativePath = fileUrl.replace('/uploads/', '');
       const filePath = path.join(this.uploadDir, relativePath);
-      
+
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

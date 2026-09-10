@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Patch, Body, UseGuards, Request, UseInterceptors, UploadedFile, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  UseGuards,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  Inject,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VendorBusinessService } from './vendor-business.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,7 +24,7 @@ import type { StorageProvider } from '../common/providers/storage.provider';
 export class VendorBusinessController {
   constructor(
     private readonly service: VendorBusinessService,
-    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider
+    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
   @Post('upload')

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -10,7 +15,9 @@ export class VendorContentBuilderService {
       where: { vendorId },
     });
     if (!business) {
-      throw new NotFoundException('Business not found. Please complete onboarding.');
+      throw new NotFoundException(
+        'Business not found. Please complete onboarding.',
+      );
     }
     return business;
   }
@@ -32,11 +39,15 @@ export class VendorContentBuilderService {
     });
 
     if (blockCount >= 10) {
-      throw new BadRequestException('You have reached the maximum limit of 10 custom sections.');
+      throw new BadRequestException(
+        'You have reached the maximum limit of 10 custom sections.',
+      );
     }
 
     // Determine the next sortOrder
-    const lastBlock = await (this.prisma as any).businessContentSection.findFirst({
+    const lastBlock = await (
+      this.prisma as any
+    ).businessContentSection.findFirst({
       where: { businessId: business.id },
       orderBy: { sortOrder: 'desc' },
     });
@@ -53,13 +64,15 @@ export class VendorContentBuilderService {
 
   async updateBlock(vendorId: string, id: string, data: any) {
     const business = await this.getBusinessByVendorId(vendorId);
-    
+
     const block = await (this.prisma as any).businessContentSection.findFirst({
       where: { id, businessId: business.id },
     });
 
     if (!block) {
-      throw new NotFoundException('Content section not found or does not belong to you.');
+      throw new NotFoundException(
+        'Content section not found or does not belong to you.',
+      );
     }
 
     return (this.prisma as any).businessContentSection.update({
@@ -70,13 +83,15 @@ export class VendorContentBuilderService {
 
   async deleteBlock(vendorId: string, id: string) {
     const business = await this.getBusinessByVendorId(vendorId);
-    
+
     const block = await (this.prisma as any).businessContentSection.findFirst({
       where: { id, businessId: business.id },
     });
 
     if (!block) {
-      throw new NotFoundException('Content section not found or does not belong to you.');
+      throw new NotFoundException(
+        'Content section not found or does not belong to you.',
+      );
     }
 
     return (this.prisma as any).businessContentSection.delete({
@@ -96,7 +111,9 @@ export class VendorContentBuilderService {
     });
 
     if (blocks.length !== blockIds.length) {
-      throw new ForbiddenException('Some sections do not belong to you or do not exist.');
+      throw new ForbiddenException(
+        'Some sections do not belong to you or do not exist.',
+      );
     }
 
     // Update in transaction
@@ -108,7 +125,7 @@ export class VendorContentBuilderService {
     });
 
     await this.prisma.$transaction(updates);
-    
+
     return { success: true, message: 'Blocks reordered successfully.' };
   }
 }

@@ -14,7 +14,7 @@ import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
     {
       provide: STORAGE_PROVIDER,
       useClass: CloudinaryStorageProvider,
-    }
+    },
   ],
 })
 export class VendorBusinessModule {}

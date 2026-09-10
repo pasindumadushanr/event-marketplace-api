@@ -1,4 +1,19 @@
-import { Controller, Get, Param, UseGuards, Patch, Body, Query, Request, Post, UseInterceptors, UploadedFile, BadRequestException, Inject, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+  Patch,
+  Body,
+  Query,
+  Request,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Inject,
+  Delete,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,7 +32,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
-    @Inject(STORAGE_PROVIDER) private readonly storageProvider: StorageProvider
+    @Inject(STORAGE_PROVIDER) private readonly storageProvider: StorageProvider,
   ) {}
 
   @Post(':id/contact')
@@ -25,11 +40,11 @@ export class UsersController {
   @Roles('SUPER_ADMIN', 'ADMIN')
   async contactUser(
     @Param('id') id: string,
-    @Body() body: { subject: string; message: string; method: string }
+    @Body() body: { subject: string; message: string; method: string },
   ) {
     const user = await this.usersService.findById(id);
     if (!user) throw new BadRequestException('User not found');
-    
+
     if (body.method === 'EMAIL') {
       const html = `<div style="font-family: sans-serif; color: #333;">
         <h2>Message from LuxeEvents Admin</h2>
@@ -40,7 +55,9 @@ export class UsersController {
       await this.emailService.sendMail(user.email, body.subject, html);
       return { success: true, message: 'Email sent successfully' };
     } else {
-      throw new BadRequestException('Inbox messaging is not yet implemented for direct admin-to-user.');
+      throw new BadRequestException(
+        'Inbox messaging is not yet implemented for direct admin-to-user.',
+      );
     }
   }
 
@@ -61,7 +78,11 @@ export class UsersController {
   @Patch('me/password')
   @UseGuards(JwtAuthGuard)
   updatePassword(@Request() req: any, @Body() data: any) {
-    return this.usersService.updatePassword(req.user.id, data.currentPassword, data.newPassword);
+    return this.usersService.updatePassword(
+      req.user.id,
+      data.currentPassword,
+      data.newPassword,
+    );
   }
 
   @Post('me/logout-all')
@@ -77,8 +98,8 @@ export class UsersController {
   @ApiBody({
     schema: {
       type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } }
-    }
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
   })
   async uploadAvatar(
     @Request() req: any,
@@ -87,10 +108,10 @@ export class UsersController {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    
+
     // Upload to Cloudinary
     const url = await this.storageProvider.uploadFile(file, 'avatars');
-    
+
     // Update user record
     return this.usersService.updateMe(req.user.id, { profileImage: url });
   }

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { PackageTemplatesService } from './package-templates.service';
 import { Prisma } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -9,7 +18,9 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('package-templates')
 @Controller('package-templates')
 export class PackageTemplatesController {
-  constructor(private readonly packageTemplatesService: PackageTemplatesService) {}
+  constructor(
+    private readonly packageTemplatesService: PackageTemplatesService,
+  ) {}
 
   @Get()
   findAll() {
@@ -33,7 +44,10 @@ export class PackageTemplatesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: Prisma.PackageTemplateUpdateInput) {
+  update(
+    @Param('id') id: string,
+    @Body() data: Prisma.PackageTemplateUpdateInput,
+  ) {
     return this.packageTemplatesService.update(id, data);
   }
 

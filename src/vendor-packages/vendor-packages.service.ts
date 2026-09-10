@@ -8,7 +8,7 @@ export class VendorPackagesService {
   async getMyBusinessId(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
     if (!business) throw new NotFoundException('Business not found.');
     return business.id;
@@ -18,7 +18,7 @@ export class VendorPackagesService {
     const businessId = await this.getMyBusinessId(vendorId);
     return (this.prisma as any).package.findMany({
       where: { businessId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -32,16 +32,16 @@ export class VendorPackagesService {
         features: data.features || [],
         duration: data.duration,
         status: data.status || 'ACTIVE',
-        businessId
-      }
+        businessId,
+      },
     });
   }
 
   async updatePackage(vendorId: string, id: string, data: any) {
     const businessId = await this.getMyBusinessId(vendorId);
-    
+
     const pkg = await (this.prisma as any).package.findFirst({
-      where: { id, businessId }
+      where: { id, businessId },
     });
     if (!pkg) throw new NotFoundException('Package not found');
 
@@ -53,21 +53,21 @@ export class VendorPackagesService {
         price: data.price,
         features: data.features,
         duration: data.duration,
-        status: data.status
-      }
+        status: data.status,
+      },
     });
   }
 
   async deletePackage(vendorId: string, id: string) {
     const businessId = await this.getMyBusinessId(vendorId);
-    
+
     const pkg = await (this.prisma as any).package.findFirst({
-      where: { id, businessId }
+      where: { id, businessId },
     });
     if (!pkg) throw new NotFoundException('Package not found');
 
     return (this.prisma as any).package.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

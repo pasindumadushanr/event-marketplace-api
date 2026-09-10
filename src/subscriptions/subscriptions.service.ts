@@ -15,7 +15,7 @@ export class SubscriptionsService {
 
   async getPlans() {
     return this.prisma.subscriptionPlan.findMany({
-      orderBy: { price: 'asc' }
+      orderBy: { price: 'asc' },
     });
   }
 
@@ -27,15 +27,15 @@ export class SubscriptionsService {
         price: data.price,
         durationDays: data.durationDays,
         features: data.features,
-        isActive: data.isActive
-      }
+        isActive: data.isActive,
+      },
     });
   }
 
   async updatePlan(id: string, data: any) {
     return this.prisma.subscriptionPlan.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -44,7 +44,9 @@ export class SubscriptionsService {
   // ==============================
 
   async grantFreeSubscription(vendorId: string, planId: string) {
-    const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
     if (!plan) throw new NotFoundException('Plan not found');
 
     const startDate = new Date();
@@ -53,7 +55,7 @@ export class SubscriptionsService {
     // Cancel existing active ones
     await this.prisma.vendorSubscription.updateMany({
       where: { vendorId, status: 'ACTIVE' },
-      data: { status: 'EXPIRED' }
+      data: { status: 'EXPIRED' },
     });
 
     return this.prisma.vendorSubscription.create({
@@ -64,7 +66,7 @@ export class SubscriptionsService {
         endDate,
         status: 'ACTIVE',
       },
-      include: { plan: true }
+      include: { plan: true },
     });
   }
 
@@ -72,25 +74,30 @@ export class SubscriptionsService {
     return this.prisma.vendorSubscription.findFirst({
       where: { vendorId, status: 'ACTIVE' },
       include: { plan: true },
-      orderBy: { endDate: 'desc' }
+      orderBy: { endDate: 'desc' },
     });
   }
 
   async getAllVendorSubscriptions() {
     return this.prisma.vendorSubscription.findMany({
-      include: { 
+      include: {
         plan: true,
         vendor: {
-          select: { firstName: true, lastName: true, email: true, businesses: { select: { name: true } } }
-        }
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            businesses: { select: { name: true } },
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async subscribe(vendorId: string, planId: string) {
     const plan = await this.prisma.subscriptionPlan.findUnique({
-      where: { id: planId }
+      where: { id: planId },
     });
 
     if (!plan || !plan.isActive) {
@@ -100,7 +107,7 @@ export class SubscriptionsService {
     // Cancel existing active subscriptions
     await this.prisma.vendorSubscription.updateMany({
       where: { vendorId, status: 'ACTIVE' },
-      data: { status: 'CANCELLED' }
+      data: { status: 'CANCELLED' },
     });
 
     const startDate = new Date();
@@ -114,8 +121,8 @@ export class SubscriptionsService {
         startDate,
         endDate,
         paymentStatus: 'PAID', // Auto-paid for mock flow
-        paymentMethod: 'MOCK'
-      }
+        paymentMethod: 'MOCK',
+      },
     });
   }
 
@@ -132,9 +139,9 @@ export class SubscriptionsService {
     const expired = await this.prisma.vendorSubscription.updateMany({
       where: {
         status: 'ACTIVE',
-        endDate: { lt: now }
+        endDate: { lt: now },
       },
-      data: { status: 'EXPIRED' }
+      data: { status: 'EXPIRED' },
     });
 
     this.logger.debug(`Marked ${expired.count} subscriptions as EXPIRED`);

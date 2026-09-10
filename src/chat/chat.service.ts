@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 
@@ -6,7 +10,7 @@ import { EmailService } from '../email/email.service';
 export class ChatService {
   constructor(
     private prisma: PrismaService,
-    private emailService: EmailService
+    private emailService: EmailService,
   ) {}
 
   // Fetch all conversations for a user
@@ -22,7 +26,12 @@ export class ChatService {
         where: { businessId: business.id },
         include: {
           customer: {
-            select: { id: true, firstName: true, lastName: true, profileImage: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              profileImage: true,
+            },
           },
           messages: {
             orderBy: { createdAt: 'desc' },
@@ -56,8 +65,17 @@ export class ChatService {
         customerId_businessId: { customerId, businessId },
       },
       include: {
-        customer: { select: { id: true, firstName: true, lastName: true, profileImage: true } },
-        business: { select: { id: true, name: true, logo: true, vendorId: true } },
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
+        business: {
+          select: { id: true, name: true, logo: true, vendorId: true },
+        },
       },
     });
 
@@ -65,8 +83,17 @@ export class ChatService {
       conversation = await this.prisma.conversation.create({
         data: { customerId, businessId },
         include: {
-          customer: { select: { id: true, firstName: true, lastName: true, profileImage: true } },
-          business: { select: { id: true, name: true, logo: true, vendorId: true } },
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              profileImage: true,
+            },
+          },
+          business: {
+            select: { id: true, name: true, logo: true, vendorId: true },
+          },
         },
       });
     }
@@ -112,39 +139,40 @@ export class ChatService {
       include: {
         customer: true,
         business: {
-          include: { vendor: true }
-        }
-      }
+          include: { vendor: true },
+        },
+      },
     });
 
     // Check if customer is sending a message to the vendor
     if (senderId === conversation.customerId) {
       const profileSettings = conversation.business.profileSettings as any;
       // Default to true if not explicitly set to false
-      const shouldEmail = profileSettings?.emailNotifications?.messages !== false;
-      
+      const shouldEmail =
+        profileSettings?.emailNotifications?.messages !== false;
+
       if (shouldEmail) {
         this.emailService.sendNewMessageNotification(
           conversation.business.vendor.email,
           conversation.business.vendor.firstName,
           conversation.customer.firstName,
-          content
+          content,
         );
       }
     }
 
     return message;
   }
-  
+
   // Mark messages as read
   async markAsRead(conversationId: string, userId: string) {
     return this.prisma.message.updateMany({
       where: {
         conversationId,
         senderId: { not: userId },
-        isRead: false
+        isRead: false,
       },
-      data: { isRead: true }
+      data: { isRead: true },
     });
   }
 }

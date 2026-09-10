@@ -34,21 +34,28 @@ export class ContactService {
     await this.emailService.sendContactConfirmation(dto.email, dto.name);
 
     // Send notification to the admin
-    const adminEmail = this.configService.get<string>('SMTP_FROM_EMAIL', 'admin@luxeevents.com');
+    const adminEmail = this.configService.get<string>(
+      'SMTP_FROM_EMAIL',
+      'admin@luxeevents.com',
+    );
     await this.emailService.sendAdminContactNotification(
       adminEmail,
       dto.name,
       dto.email,
-      dto.message
+      dto.message,
     );
 
-    return { success: true, id: submission.id, message: 'Message sent successfully.' };
+    return {
+      success: true,
+      id: submission.id,
+      message: 'Message sent successfully.',
+    };
   }
 
   // Admin: Get all tickets
   async getTickets() {
     return (this.prisma as any).contactSubmission.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -56,7 +63,7 @@ export class ContactService {
   async updateTicketStatus(id: string, status: string) {
     return (this.prisma as any).contactSubmission.update({
       where: { id },
-      data: { status }
+      data: { status },
     });
   }
 }

@@ -10,7 +10,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('Successfully connected to the database.');
     } catch (error: any) {
-      this.logger.warn(`Database connection timed out during startup: ${error?.message || error}. App will attempt connection on demand.`);
+      this.logger.warn(
+        `Database connection timed out during startup: ${error?.message || error}. App will attempt connection on demand.`,
+      );
     }
   }
 }

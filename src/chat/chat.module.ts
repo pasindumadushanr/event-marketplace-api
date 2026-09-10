@@ -12,7 +12,7 @@ import { EmailModule } from '../email/email.module';
     PrismaModule,
     EmailModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'fallback_secret',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
   ],

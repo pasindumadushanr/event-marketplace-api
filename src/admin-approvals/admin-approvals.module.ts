@@ -6,6 +6,6 @@ import { EmailModule } from '../email/email.module';
 @Module({
   imports: [EmailModule],
   providers: [AdminApprovalsService],
-  controllers: [AdminApprovalsController]
+  controllers: [AdminApprovalsController],
 })
 export class AdminApprovalsModule {}

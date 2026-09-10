@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -55,7 +65,10 @@ export class AuthController {
   @Post('verify-admin-login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify Admin Login OTP' })
-  verifyAdminLoginOtp(@Body('userId') userId: string, @Body('otp') otp: string) {
+  verifyAdminLoginOtp(
+    @Body('userId') userId: string,
+    @Body('otp') otp: string,
+  ) {
     return this.authService.verifyAdminLoginOtp(userId, otp);
   }
 
@@ -70,18 +83,20 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res) {
     // The user is injected by Passport's GoogleStrategy
     const user = req.user;
-    
+
     // Generate our application tokens
     const tokens = await this.authService.generateTokens(
       user.id,
       user.email,
-      user.role ? (user as any).role.name : 'CUSTOMER', // Adjust as needed based on how roles are loaded
+      user.role ? user.role.name : 'CUSTOMER', // Adjust as needed based on how roles are loaded
       user.firstName,
       user.lastName,
     );
 
     // Redirect to frontend with tokens in URL
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    res.redirect(
+      `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 }

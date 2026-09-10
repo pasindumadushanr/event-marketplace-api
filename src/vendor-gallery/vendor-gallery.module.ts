@@ -12,8 +12,8 @@ import { PrismaModule } from '../prisma/prisma.module';
     {
       provide: STORAGE_PROVIDER,
       useClass: CloudinaryStorageProvider,
-    }
+    },
   ],
-  controllers: [VendorGalleryController]
+  controllers: [VendorGalleryController],
 })
 export class VendorGalleryModule {}

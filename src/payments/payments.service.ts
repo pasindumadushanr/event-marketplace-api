@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,7 +13,7 @@ export class PaymentsService {
   async createSession(bookingId: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { package: true, business: true }
+      include: { package: true, business: true },
     });
 
     if (!booking) {
@@ -25,7 +29,7 @@ export class PaymentsService {
     // Update booking with the session ID
     await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { paymentSessionId: sessionId }
+      data: { paymentSessionId: sessionId },
     });
 
     // In a real app, this would return a Stripe Checkout URL.
@@ -37,14 +41,14 @@ export class PaymentsService {
       bookingDetails: {
         totalAmount: booking.totalAmount,
         packageName: booking.package?.name || 'Custom Booking',
-        businessName: booking.business.name
-      }
+        businessName: booking.business.name,
+      },
     };
   }
 
   async processPayment(sessionId: string, outcome: 'SUCCESS' | 'FAILED') {
     const booking = await this.prisma.booking.findFirst({
-      where: { paymentSessionId: sessionId }
+      where: { paymentSessionId: sessionId },
     });
 
     if (!booking) {
@@ -56,15 +60,15 @@ export class PaymentsService {
         where: { id: booking.id },
         data: {
           paymentStatus: 'PAID',
-          status: 'CONFIRMED' // Automatically confirm booking when paid (for direct bookings)
-        }
+          status: 'CONFIRMED', // Automatically confirm booking when paid (for direct bookings)
+        },
       });
     } else {
       await this.prisma.booking.update({
         where: { id: booking.id },
         data: {
-          paymentStatus: 'FAILED'
-        }
+          paymentStatus: 'FAILED',
+        },
       });
     }
 
@@ -74,7 +78,7 @@ export class PaymentsService {
   async getSessionDetails(sessionId: string) {
     const booking = await this.prisma.booking.findFirst({
       where: { paymentSessionId: sessionId },
-      include: { package: true, business: true }
+      include: { package: true, business: true },
     });
 
     if (!booking) {
@@ -86,7 +90,7 @@ export class PaymentsService {
       totalAmount: booking.totalAmount,
       packageName: booking.package?.name || 'Custom Booking',
       businessName: booking.business.name,
-      paymentStatus: booking.paymentStatus
+      paymentStatus: booking.paymentStatus,
     };
   }
 
@@ -95,9 +99,9 @@ export class PaymentsService {
       where: { paymentStatus: 'PAID' },
       include: {
         customer: { select: { firstName: true, lastName: true, email: true } },
-        business: { select: { name: true } }
+        business: { select: { name: true } },
       },
-      orderBy: { updatedAt: 'desc' } // Assuming it's marked PAID at updatedAt
+      orderBy: { updatedAt: 'desc' }, // Assuming it's marked PAID at updatedAt
     });
   }
 }

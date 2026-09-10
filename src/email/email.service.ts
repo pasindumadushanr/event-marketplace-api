@@ -6,7 +6,9 @@ import { EmailTemplates } from './email.templates';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(@Inject('EMAIL_PROVIDER') private readonly emailProvider: IEmailProvider) {}
+  constructor(
+    @Inject('EMAIL_PROVIDER') private readonly emailProvider: IEmailProvider,
+  ) {}
 
   /**
    * Core sendMail function wrapping the Provider logic.
@@ -27,14 +29,27 @@ export class EmailService {
     return this.sendMail(email, 'We received your inquiry - LuxeEvents', html);
   }
 
-  async sendAdminContactNotification(adminEmail: string, name: string, email: string, message: string) {
-    const html = EmailTemplates.getAdminContactNotificationTemplate(name, email, message);
+  async sendAdminContactNotification(
+    adminEmail: string,
+    name: string,
+    email: string,
+    message: string,
+  ) {
+    const html = EmailTemplates.getAdminContactNotificationTemplate(
+      name,
+      email,
+      message,
+    );
     return this.sendMail(adminEmail, `New Contact Inquiry from ${name}`, html);
   }
 
   async sendVendorApprovalNotification(email: string, name: string) {
     const html = EmailTemplates.getVendorApprovalTemplate(name);
-    return this.sendMail(email, 'Your Vendor Account is Approved! - LuxeEvents', html);
+    return this.sendMail(
+      email,
+      'Your Vendor Account is Approved! - LuxeEvents',
+      html,
+    );
   }
 
   async sendOtpEmail(email: string, name: string, otp: string) {
@@ -42,13 +57,29 @@ export class EmailService {
     return this.sendMail(email, 'Your Verification Code - LuxeEvents', html);
   }
 
-  async sendNewVendorApplicationNotification(adminEmail: string, vendorName: string, businessName: string) {
-    const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(vendorName, businessName);
+  async sendNewVendorApplicationNotification(
+    adminEmail: string,
+    vendorName: string,
+    businessName: string,
+  ) {
+    const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(
+      vendorName,
+      businessName,
+    );
     return this.sendMail(adminEmail, 'New Vendor Application Submitted', html);
   }
 
-  async sendNewMessageNotification(email: string, recipientName: string, senderName: string, messagePreview: string) {
-    const html = EmailTemplates.getNewMessageNotificationTemplate(recipientName, senderName, messagePreview);
+  async sendNewMessageNotification(
+    email: string,
+    recipientName: string,
+    senderName: string,
+    messagePreview: string,
+  ) {
+    const html = EmailTemplates.getNewMessageNotificationTemplate(
+      recipientName,
+      senderName,
+      messagePreview,
+    );
     return this.sendMail(email, `New Message from ${senderName}`, html);
   }
 }

@@ -8,41 +8,50 @@ export class AdminDashboardService {
   async getStats(roleName: string) {
     const totalUsers = await this.prisma.user.count();
     const activeVendors = await this.prisma.business.count({
-      where: { vendorStatus: 'APPROVED' }
+      where: { vendorStatus: 'APPROVED' },
     });
     const completedBookings = await this.prisma.booking.count({
-      where: { status: 'COMPLETED' }
+      where: { status: 'COMPLETED' },
     });
-    
+
     // Revenue from completed bookings (ONLY FOR SUPER_ADMIN)
     let platformRevenue: number | null = null;
     if (roleName === 'SUPER_ADMIN') {
       const bookings = await this.prisma.booking.findMany({
-        where: { status: 'COMPLETED' } // Or PAID
+        where: { status: 'COMPLETED' }, // Or PAID
       });
-      const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
-      platformRevenue = totalRevenue * 0.10; // Platform cut is 10%
+      const totalRevenue = bookings.reduce(
+        (sum, b) => sum + Number(b.totalAmount),
+        0,
+      );
+      platformRevenue = totalRevenue * 0.1; // Platform cut is 10%
     }
 
     // Get 6 months chart data for user growth
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
+
     const users = await this.prisma.user.findMany({
       where: { createdAt: { gte: sixMonthsAgo } },
-      select: { createdAt: true }
+      select: { createdAt: true },
     });
 
     const monthlyData: Record<string, number> = {};
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
-      const monthYear = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+      const monthYear = d.toLocaleString('default', {
+        month: 'short',
+        year: 'numeric',
+      });
       monthlyData[monthYear] = 0;
     }
 
-    users.forEach(u => {
-      const monthYear = u.createdAt.toLocaleString('default', { month: 'short', year: 'numeric' });
+    users.forEach((u) => {
+      const monthYear = u.createdAt.toLocaleString('default', {
+        month: 'short',
+        year: 'numeric',
+      });
       if (monthlyData[monthYear] !== undefined) {
         monthlyData[monthYear]++;
       }
@@ -50,14 +59,20 @@ export class AdminDashboardService {
 
     const chartData = Object.entries(monthlyData).map(([name, total]) => ({
       name,
-      total
+      total,
     }));
 
     // Recent signups
     const recentSignups = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
-      select: { id: true, firstName: true, lastName: true, email: true, createdAt: true }
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        createdAt: true,
+      },
     });
 
     return {
@@ -66,7 +81,7 @@ export class AdminDashboardService {
       completedBookings,
       platformRevenue, // null for ADMIN
       chartData,
-      recentSignups
+      recentSignups,
     };
   }
 }

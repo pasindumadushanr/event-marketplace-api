@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, UseInterceptors, UploadedFile, BadRequestException, Body, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  UseGuards,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Body,
+  Inject,
+} from '@nestjs/common';
 import { VendorGalleryService } from './vendor-gallery.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -14,7 +28,7 @@ import type { StorageProvider } from '../common/providers/storage.provider';
 export class VendorGalleryController {
   constructor(
     private readonly service: VendorGalleryService,
-    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider
+    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
   @Get()
@@ -23,23 +37,31 @@ export class VendorGalleryController {
   }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: memoryStorage(),
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|webp|mp4)$/)) {
-        return cb(new BadRequestException('Only images and videos are allowed'), false);
-      }
-      cb(null, true);
-    },
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-  }))
-  async uploadFile(@Request() req: any, @UploadedFile() file: Express.Multer.File) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp|mp4)$/)) {
+          return cb(
+            new BadRequestException('Only images and videos are allowed'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    }),
+  )
+  async uploadFile(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     if (!file) throw new BadRequestException('File is required');
-    
+
     // Upload via StorageProvider (Cloudinary)
     const fileUrl = await this.storage.uploadFile(file, 'gallery');
     const type = file.mimetype.startsWith('video/') ? 'VIDEO' : 'IMAGE';
-    
+
     return this.service.addGalleryItem(req.user.userId, fileUrl, type);
   }
 

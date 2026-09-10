@@ -15,15 +15,22 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: configService.get<string>('GOOGLE_CLIENT_ID') || '',
       clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
-      callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL') || 'http://localhost:3001/auth/google/callback',
+      callbackURL:
+        configService.get<string>('GOOGLE_CALLBACK_URL') ||
+        'http://localhost:3001/auth/google/callback',
       scope: ['email', 'profile'],
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: any, done: VerifyCallback): Promise<any> {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: any,
+    done: VerifyCallback,
+  ): Promise<any> {
     try {
       const { id, name, emails, photos } = profile;
-      
+
       const user = {
         googleId: id,
         email: emails[0].value,

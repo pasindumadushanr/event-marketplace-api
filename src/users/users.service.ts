@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -22,7 +26,9 @@ export class UsersService {
         throw new ConflictException('User with this email already exists');
       }
       if (existingUser.phone === data.phone) {
-        throw new ConflictException('User with this phone number already exists');
+        throw new ConflictException(
+          'User with this phone number already exists',
+        );
       }
     }
 
@@ -58,20 +64,23 @@ export class UsersService {
 
   async findAll(roles?: string[]) {
     return this.prisma.user.findMany({
-      where: roles && roles.length > 0 ? {
-        role: {
-          name: { in: roles }
-        }
-      } : undefined,
-      include: { 
+      where:
+        roles && roles.length > 0
+          ? {
+              role: {
+                name: { in: roles },
+              },
+            }
+          : undefined,
+      include: {
         role: true,
         businesses: { select: { createdAt: true } },
         vendorSubscriptions: {
           orderBy: { endDate: 'desc' },
-          take: 1
-        }
+          take: 1,
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -84,17 +93,17 @@ export class UsersService {
 
   async updateMe(id: string, data: any) {
     const { password, ...rest } = data;
-    
+
     // Check if email or phone is already taken by someone else
     if (rest.email || rest.phone) {
       const orConditions: any[] = [];
       if (rest.email) orConditions.push({ email: rest.email });
       if (rest.phone) orConditions.push({ phone: rest.phone });
-      
+
       const existingUser = await this.prisma.user.findFirst({
-        where: { 
+        where: {
           OR: orConditions,
-          NOT: { id }
+          NOT: { id },
         },
       });
 
@@ -124,16 +133,20 @@ export class UsersService {
         lastName: true,
         email: true,
         phone: true,
-        profileImage: true
-      }
+        profileImage: true,
+      },
     });
   }
 
-  async updatePassword(id: string, currentPassword?: string, newPassword?: string) {
+  async updatePassword(
+    id: string,
+    currentPassword?: string,
+    newPassword?: string,
+  ) {
     if (!currentPassword || !newPassword) {
       throw new BadRequestException('Current and new password are required');
     }
-    
+
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user || !user.password) {
       throw new BadRequestException('Invalid user or password not set');
@@ -149,7 +162,7 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword },
     });
 
     return { message: 'Password updated successfully' };
@@ -158,12 +171,15 @@ export class UsersService {
   async logoutAllDevices(id: string) {
     await this.prisma.user.update({
       where: { id },
-      data: { hashedRefreshToken: null }
+      data: { hashedRefreshToken: null },
     });
     return { message: 'Logged out of all devices successfully' };
   }
 
-  async updateRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: string,
+    hashedRefreshToken: string | null,
+  ): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { hashedRefreshToken },
@@ -180,18 +196,20 @@ export class UsersService {
   async deleteAccount(userId: string) {
     // Delete favorite businesses first (has cascade but safe to be explicit)
     await this.prisma.favoriteBusiness.deleteMany({
-      where: { customerId: userId }
+      where: { customerId: userId },
     });
-    
+
     // For customers testing this, it's mostly safe to just delete the user record
     // If they have bookings/businesses, we catch the foreign key error
     try {
       await this.prisma.user.delete({
-        where: { id: userId }
+        where: { id: userId },
       });
       return { success: true };
     } catch (error) {
-      throw new ConflictException('Cannot delete account because it has active bookings or businesses attached.');
+      throw new ConflictException(
+        'Cannot delete account because it has active bookings or businesses attached.',
+      );
     }
   }
 }

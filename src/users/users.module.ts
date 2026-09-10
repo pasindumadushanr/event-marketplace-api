@@ -14,7 +14,7 @@ import { EmailModule } from '../email/email.module';
     {
       provide: STORAGE_PROVIDER,
       useClass: CloudinaryStorageProvider,
-    }
+    },
   ],
   exports: [UsersService],
 })

@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
@@ -13,7 +18,7 @@ export class VendorDocumentsService {
   async getDocuments(vendorId: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -22,14 +27,18 @@ export class VendorDocumentsService {
 
     return this.prisma.document.findMany({
       where: { businessId: business.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async uploadDocument(vendorId: string, type: string, file: Express.Multer.File) {
+  async uploadDocument(
+    vendorId: string,
+    type: string,
+    file: Express.Multer.File,
+  ) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -43,15 +52,15 @@ export class VendorDocumentsService {
         businessId: business.id,
         type: type || 'OTHER',
         url: url,
-        status: 'PENDING'
-      }
+        status: 'PENDING',
+      },
     });
   }
 
   async deleteDocument(vendorId: string, documentId: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -59,7 +68,7 @@ export class VendorDocumentsService {
     }
 
     const document = await this.prisma.document.findUnique({
-      where: { id: documentId }
+      where: { id: documentId },
     });
 
     if (!document) {
@@ -76,7 +85,7 @@ export class VendorDocumentsService {
     }
 
     return this.prisma.document.delete({
-      where: { id: documentId }
+      where: { id: documentId },
     });
   }
 }

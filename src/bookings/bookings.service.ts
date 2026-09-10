@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -8,7 +13,7 @@ export class BookingsService {
   // For Customers
   async createBooking(customerId: string, data: any) {
     const pkg = await (this.prisma as any).package.findUnique({
-      where: { id: data.packageId }
+      where: { id: data.packageId },
     });
     if (!pkg) throw new NotFoundException('Package not found');
 
@@ -20,8 +25,8 @@ export class BookingsService {
         date: new Date(data.date),
         totalAmount: pkg.price,
         notes: data.notes,
-        status: 'PENDING'
-      }
+        status: 'PENDING',
+      },
     });
   }
 
@@ -29,7 +34,7 @@ export class BookingsService {
   async getVendorBookings(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
     if (!business) throw new NotFoundException('Business not found');
 
@@ -37,27 +42,37 @@ export class BookingsService {
       where: { businessId: business.id },
       include: {
         customer: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
         },
-        package: true
+        package: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   // For Vendors
-  async updateBookingStatus(vendorId: string, bookingId: string, status: string) {
+  async updateBookingStatus(
+    vendorId: string,
+    bookingId: string,
+    status: string,
+  ) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
     if (!business) throw new NotFoundException('Business not found');
 
     const booking = await (this.prisma as any).booking.findUnique({
-      where: { id: bookingId }
+      where: { id: bookingId },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    
+
     if (booking.businessId !== business.id) {
       throw new ForbiddenException('Not authorized to update this booking');
     }
@@ -68,7 +83,7 @@ export class BookingsService {
 
     return (this.prisma as any).booking.update({
       where: { id: bookingId },
-      data: { status }
+      data: { status },
     });
   }
 
@@ -77,31 +92,37 @@ export class BookingsService {
     return (this.prisma as any).booking.findMany({
       include: {
         customer: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
         },
         business: {
-          select: { id: true, name: true, vendor: { select: { email: true } } }
+          select: { id: true, name: true, vendor: { select: { email: true } } },
         },
-        package: true
+        package: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   // For Admins
   async updateBookingStatusAdmin(bookingId: string, status: string) {
     const booking = await (this.prisma as any).booking.findUnique({
-      where: { id: bookingId }
+      where: { id: bookingId },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    
+
     if (!['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status)) {
       throw new BadRequestException('Invalid status');
     }
 
     return (this.prisma as any).booking.update({
       where: { id: bookingId },
-      data: { status }
+      data: { status },
     });
   }
 }

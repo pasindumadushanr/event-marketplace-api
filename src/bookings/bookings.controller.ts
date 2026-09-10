@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -26,7 +35,11 @@ export class BookingsController {
   // Vendor updates booking status
   @Patch('vendor/:id/status')
   @Roles('VENDOR')
-  updateBookingStatus(@Request() req: any, @Param('id') id: string, @Body() data: { status: string }) {
+  updateBookingStatus(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() data: { status: string },
+  ) {
     return this.service.updateBookingStatus(req.user.userId, id, data.status);
   }
 
@@ -40,7 +53,10 @@ export class BookingsController {
   // Admin updates booking status
   @Patch('admin/:id/status')
   @Roles('SUPER_ADMIN', 'ADMIN')
-  updateBookingStatusAdmin(@Param('id') id: string, @Body() data: { status: string }) {
+  updateBookingStatusAdmin(
+    @Param('id') id: string,
+    @Body() data: { status: string },
+  ) {
     return this.service.updateBookingStatusAdmin(id, data.status);
   }
 }

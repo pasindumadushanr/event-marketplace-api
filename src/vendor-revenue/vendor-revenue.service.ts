@@ -8,7 +8,7 @@ export class VendorRevenueService {
   async getRevenueStats(vendorId: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -16,32 +16,37 @@ export class VendorRevenueService {
     }
 
     const bookings = await this.prisma.booking.findMany({
-      where: { 
+      where: {
         businessId: business.id,
-        paymentStatus: 'PAID'
-      }
+        paymentStatus: 'PAID',
+      },
     });
 
-    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
-    const completedBookings = bookings.filter(b => b.status === 'COMPLETED').length;
-    
+    const totalRevenue = bookings.reduce(
+      (sum, b) => sum + Number(b.totalAmount),
+      0,
+    );
+    const completedBookings = bookings.filter(
+      (b) => b.status === 'COMPLETED',
+    ).length;
+
     // In a real app, pendingPayouts would be calculated from transfers
     // For now, we'll just consider all CONFIRMED bookings as pending payouts
     const pendingPayouts = bookings
-      .filter(b => b.status === 'CONFIRMED')
+      .filter((b) => b.status === 'CONFIRMED')
       .reduce((sum, b) => sum + Number(b.totalAmount), 0);
 
     return {
       totalRevenue,
       completedBookings,
-      pendingPayouts
+      pendingPayouts,
     };
   }
 
   async getChartData(vendorId: string) {
     const business = await this.prisma.business.findFirst({
       where: { vendorId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!business) {
@@ -53,30 +58,36 @@ export class VendorRevenueService {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     const bookings = await this.prisma.booking.findMany({
-      where: { 
+      where: {
         businessId: business.id,
         paymentStatus: 'PAID',
-        createdAt: { gte: sixMonthsAgo }
+        createdAt: { gte: sixMonthsAgo },
       },
       select: {
         totalAmount: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     // Group by month
     const monthlyData: Record<string, number> = {};
-    
+
     // Initialize last 6 months with 0
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
-      const monthYear = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+      const monthYear = d.toLocaleString('default', {
+        month: 'short',
+        year: 'numeric',
+      });
       monthlyData[monthYear] = 0;
     }
 
-    bookings.forEach(b => {
-      const monthYear = b.createdAt.toLocaleString('default', { month: 'short', year: 'numeric' });
+    bookings.forEach((b) => {
+      const monthYear = b.createdAt.toLocaleString('default', {
+        month: 'short',
+        year: 'numeric',
+      });
       if (monthlyData[monthYear] !== undefined) {
         monthlyData[monthYear] += Number(b.totalAmount);
       }
@@ -84,7 +95,7 @@ export class VendorRevenueService {
 
     return Object.entries(monthlyData).map(([name, revenue]) => ({
       name,
-      revenue
+      revenue,
     }));
   }
 }

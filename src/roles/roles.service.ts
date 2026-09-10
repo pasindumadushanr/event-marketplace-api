@@ -15,16 +15,16 @@ export class RolesService {
   async findAll() {
     return this.prisma.role.findMany({
       include: {
-        _count: { select: { users: true } }
-      }
+        _count: { select: { users: true } },
+      },
     });
   }
 
   async findAllPermissions() {
     return this.prisma.permission.findMany({
       include: {
-        _count: { select: { roles: true } }
-      }
+        _count: { select: { roles: true } },
+      },
     });
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -16,15 +21,19 @@ export class VendorApprovedGuard implements CanActivate {
     // Check if the vendor's business is approved
     const business = await this.prisma.business.findFirst({
       where: { vendorId: user.userId },
-      select: { vendorStatus: true }
+      select: { vendorStatus: true },
     });
 
     if (!business) {
-      throw new ForbiddenException('Vendor application not found. Please complete the onboarding process.');
+      throw new ForbiddenException(
+        'Vendor application not found. Please complete the onboarding process.',
+      );
     }
 
     if (business.vendorStatus !== 'APPROVED') {
-      throw new ForbiddenException(`Access denied. Your business status is currently: ${business.vendorStatus}`);
+      throw new ForbiddenException(
+        `Access denied. Your business status is currently: ${business.vendorStatus}`,
+      );
     }
 
     return true;

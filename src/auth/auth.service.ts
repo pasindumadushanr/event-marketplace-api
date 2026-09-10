@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
@@ -17,11 +21,14 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const requestedRoleName = registerDto.role === 'VENDOR' ? 'VENDOR' : 'CUSTOMER';
+    const requestedRoleName =
+      registerDto.role === 'VENDOR' ? 'VENDOR' : 'CUSTOMER';
     const assignedRole = await this.rolesService.findByName(requestedRoleName);
-    
+
     if (!assignedRole) {
-      throw new BadRequestException('Roles not initialized in DB. Please seed the database.');
+      throw new BadRequestException(
+        'Roles not initialized in DB. Please seed the database.',
+      );
     }
 
     const { role, ...userData } = registerDto;
@@ -31,7 +38,13 @@ export class AuthService {
       role: { connect: { id: assignedRole.id } },
     });
 
-    return this.generateTokens(user.id, user.email, assignedRole.name, user.firstName, user.lastName);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      assignedRole.name,
+      user.firstName,
+      user.lastName,
+    );
   }
 
   async login(loginDto: LoginDto) {
@@ -44,7 +57,10 @@ export class AuthService {
       throw new UnauthorizedException('Please login with your Google account.');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -66,11 +82,17 @@ export class AuthService {
       return {
         requiresOtp: true,
         userId: user.id,
-        message: 'OTP sent to admin email.'
+        message: 'OTP sent to admin email.',
       };
     }
 
-    return this.generateTokens(user.id, user.email, roleName, user.firstName, user.lastName);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      roleName,
+      user.firstName,
+      user.lastName,
+    );
   }
 
   async verifyAdminLoginOtp(userId: string, otp: string) {
@@ -100,18 +122,30 @@ export class AuthService {
       emailVerificationOtpExpiry: null,
     });
 
-    return this.generateTokens(user.id, user.email, roleName, user.firstName, user.lastName);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      roleName,
+      user.firstName,
+      user.lastName,
+    );
   }
 
-  async generateTokens(userId: string, email: string, roleName: string, firstName: string, lastName: string) {
+  async generateTokens(
+    userId: string,
+    email: string,
+    roleName: string,
+    firstName: string,
+    lastName: string,
+  ) {
     const payload = { sub: userId, email, role: roleName };
     const accessToken = this.jwtService.sign(payload);
-    
+
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
-    
+
     await this.usersService.updateRefreshToken(userId, hashedRefreshToken);
 
     return {
@@ -122,8 +156,8 @@ export class AuthService {
         email,
         firstName,
         lastName,
-        roleName
-      }
+        roleName,
+      },
     };
   }
 
@@ -166,11 +200,12 @@ export class AuthService {
   async sendVerificationOtp(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user) throw new BadRequestException('User not found');
-    if (user.emailVerified) throw new BadRequestException('Email already verified');
+    if (user.emailVerified)
+      throw new BadRequestException('Email already verified');
 
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Set expiry to 15 mins from now
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 15);

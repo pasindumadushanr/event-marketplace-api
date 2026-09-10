@@ -13,7 +13,7 @@ import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storag
     {
       provide: STORAGE_PROVIDER,
       useClass: CloudinaryStorageProvider,
-    }
+    },
   ],
 })
 export class AdminCmsModule {}

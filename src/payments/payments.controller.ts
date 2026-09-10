@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -13,7 +21,9 @@ export class PaymentsController {
   }
 
   @Post('process')
-  processPayment(@Body() body: { sessionId: string, outcome: 'SUCCESS' | 'FAILED' }) {
+  processPayment(
+    @Body() body: { sessionId: string; outcome: 'SUCCESS' | 'FAILED' },
+  ) {
     return this.paymentsService.processPayment(body.sessionId, body.outcome);
   }
 

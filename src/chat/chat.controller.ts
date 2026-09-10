@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -10,19 +18,29 @@ export class ChatController {
 
   @Get('conversations')
   getConversations(@Req() req) {
-    return this.chatService.getUserConversations(req.user.id, req.user.role?.name);
+    return this.chatService.getUserConversations(
+      req.user.id,
+      req.user.role?.name,
+    );
   }
 
   @Post('conversations')
   getOrCreateConversation(@Req() req, @Body() body: { businessId: string }) {
-    return this.chatService.getOrCreateConversation(req.user.id, body.businessId);
+    return this.chatService.getOrCreateConversation(
+      req.user.id,
+      body.businessId,
+    );
   }
 
   @Get('conversations/:id/messages')
   getMessages(@Req() req, @Param('id') conversationId: string) {
-    return this.chatService.getMessages(conversationId, req.user.id, req.user.role?.name);
+    return this.chatService.getMessages(
+      conversationId,
+      req.user.id,
+      req.user.role?.name,
+    );
   }
-  
+
   @Post('conversations/:id/read')
   markAsRead(@Req() req, @Param('id') conversationId: string) {
     return this.chatService.markAsRead(conversationId, req.user.id);

@@ -8,7 +8,10 @@ export class SmtpEmailProvider implements IEmailProvider {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
-    const port = parseInt(this.configService.get<string>('SMTP_PORT', '465'), 10);
+    const port = parseInt(
+      this.configService.get<string>('SMTP_PORT', '465'),
+      10,
+    );
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST'),
       port: port,
@@ -18,8 +21,8 @@ export class SmtpEmailProvider implements IEmailProvider {
         pass: this.configService.get<string>('SMTP_PASS'),
       },
       connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 5000,    // 5 seconds
-      socketTimeout: 15000,     // 15 seconds
+      greetingTimeout: 5000, // 5 seconds
+      socketTimeout: 15000, // 15 seconds
     });
 
     // Verify connection configuration
@@ -34,8 +37,11 @@ export class SmtpEmailProvider implements IEmailProvider {
 
   async sendMail(options: SendMailOptions): Promise<boolean> {
     try {
-      const fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL', 'noreply@eventmarketplace.com');
-      
+      const fromEmail = this.configService.get<string>(
+        'SMTP_FROM_EMAIL',
+        'noreply@eventmarketplace.com',
+      );
+
       const mailOptions = {
         from: `"Event Marketplace" <${fromEmail}>`,
         to: options.to,
@@ -44,7 +50,9 @@ export class SmtpEmailProvider implements IEmailProvider {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Email sent successfully to ${options.to}. Message ID: ${info.messageId}`);
+      this.logger.log(
+        `Email sent successfully to ${options.to}. Message ID: ${info.messageId}`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Failed to send email to ${options.to}`, error);
