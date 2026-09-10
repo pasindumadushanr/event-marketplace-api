@@ -125,4 +125,34 @@ export class BookingsService {
       data: { status },
     });
   }
+
+  // Mock Payment Flow
+  async createMockPayment(customerId: string, bookingId: string) {
+    const booking = await (this.prisma as any).booking.findUnique({
+      where: { id: bookingId, customerId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    
+    // In a real app, you would call Stripe/PayHere here.
+    // For now, we return a mock checkout URL.
+    return {
+      checkoutUrl: `/checkout/${booking.id}`,
+      paymentSessionId: `mock_sess_${Date.now()}`
+    };
+  }
+
+  async confirmMockPayment(customerId: string, bookingId: string) {
+    const booking = await (this.prisma as any).booking.findUnique({
+      where: { id: bookingId, customerId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    return (this.prisma as any).booking.update({
+      where: { id: bookingId },
+      data: {
+        paymentStatus: 'PAID',
+        status: 'CONFIRMED'
+      },
+    });
+  }
 }

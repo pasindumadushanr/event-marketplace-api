@@ -59,4 +59,17 @@ export class BookingsController {
   ) {
     return this.service.updateBookingStatusAdmin(id, data.status);
   }
+
+  // Mock Payment Flow
+  @Post(':id/payment/create')
+  @Roles('CUSTOMER')
+  createPayment(@Request() req: any, @Param('id') id: string) {
+    return this.service.createMockPayment(req.user.id, id);
+  }
+
+  @Post(':id/payment/confirm')
+  @Roles('CUSTOMER')
+  confirmPayment(@Request() req: any, @Param('id') id: string) {
+    return this.service.confirmMockPayment(req.user.id, id);
+  }
 }
