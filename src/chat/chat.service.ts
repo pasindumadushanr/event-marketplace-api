@@ -14,8 +14,8 @@ export class ChatService {
   ) {}
 
   // Fetch all conversations for a user
-  async getUserConversations(userId: string, roleName: string) {
-    if (roleName === 'VENDOR') {
+  async getUserConversations(userId: string, roleName: string, asVendor: boolean = false) {
+    if (roleName === 'VENDOR' && asVendor) {
       // Find businesses owned by the vendor
       const business = await this.prisma.business.findFirst({
         where: { vendorId: userId },

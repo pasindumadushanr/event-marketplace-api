@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,10 +18,11 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
-  getConversations(@Req() req) {
+  getConversations(@Req() req, @Query('mode') mode?: string) {
     return this.chatService.getUserConversations(
       req.user.id,
       req.user.role?.name,
+      mode === 'vendor'
     );
   }
 
