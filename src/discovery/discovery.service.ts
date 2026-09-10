@@ -90,7 +90,10 @@ export class DiscoveryService {
     // Map the results to include computed fields for the VendorCard
     const mappedBusinesses = businesses.map((b) => {
       // Calculate Starting Price
-      const startingPrice = b.packages.length > 0 ? b.packages[0].price : 0;
+      const startingPriceObj = b.packages.length > 0 ? b.packages[0].price : 0;
+      const startingPrice = typeof startingPriceObj === 'object' && startingPriceObj !== null 
+        ? Number(startingPriceObj.toString()) 
+        : Number(startingPriceObj);
 
       // Calculate Average Rating
       const totalRatings = b.reviews.reduce((acc, rev) => acc + rev.rating, 0);
@@ -195,8 +198,10 @@ export class DiscoveryService {
       business.reviews.length > 0
         ? (totalRatings / business.reviews.length).toFixed(1)
         : 0;
-    const startingPrice =
-      business.packages.length > 0 ? business.packages[0].price : 0;
+    const startingPriceObj = business.packages.length > 0 ? business.packages[0].price : 0;
+    const startingPrice = typeof startingPriceObj === 'object' && startingPriceObj !== null 
+      ? Number(startingPriceObj.toString()) 
+      : Number(startingPriceObj);
 
     return {
       ...business,
