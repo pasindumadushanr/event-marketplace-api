@@ -33,7 +33,7 @@ export class VendorGalleryController {
 
   @Get()
   getGallery(@Request() req: any) {
-    return this.service.getGallery(req.user.userId);
+    return this.service.getGallery(req.user.id);
   }
 
   @Post('upload')
@@ -62,13 +62,13 @@ export class VendorGalleryController {
     const fileUrl = await this.storage.uploadFile(file, 'gallery');
     const type = file.mimetype.startsWith('video/') ? 'VIDEO' : 'IMAGE';
 
-    return this.service.addGalleryItem(req.user.userId, fileUrl, type);
+    return this.service.addGalleryItem(req.user.id, fileUrl, type);
   }
 
   @Delete(':id')
   deleteItem(@Request() req: any, @Param('id') id: string) {
     // Note: To be fully clean, we should also delete the file using fs.unlinkSync here.
-    return this.service.deleteGalleryItem(req.user.userId, id);
+    return this.service.deleteGalleryItem(req.user.id, id);
   }
 
   @Patch('reorder')
@@ -76,11 +76,11 @@ export class VendorGalleryController {
     if (!data.itemIds || !Array.isArray(data.itemIds)) {
       throw new BadRequestException('Invalid item IDs array');
     }
-    return this.service.reorderItems(req.user.userId, data.itemIds);
+    return this.service.reorderItems(req.user.id, data.itemIds);
   }
 
   @Patch(':id/cover')
   setCover(@Request() req: any, @Param('id') id: string) {
-    return this.service.setCoverImage(req.user.userId, id);
+    return this.service.setCoverImage(req.user.id, id);
   }
 }

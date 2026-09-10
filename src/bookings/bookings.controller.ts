@@ -22,14 +22,14 @@ export class BookingsController {
   @Post()
   @Roles('CUSTOMER', 'VENDOR') // Allowing VENDOR so vendors can test it using their own accounts too
   createBooking(@Request() req: any, @Body() data: any) {
-    return this.service.createBooking(req.user.userId, data);
+    return this.service.createBooking(req.user.id, data);
   }
 
   // Vendor views their incoming bookings
   @Get('vendor')
   @Roles('VENDOR')
   getVendorBookings(@Request() req: any) {
-    return this.service.getVendorBookings(req.user.userId);
+    return this.service.getVendorBookings(req.user.id);
   }
 
   // Vendor updates booking status
@@ -40,7 +40,7 @@ export class BookingsController {
     @Param('id') id: string,
     @Body() data: { status: string },
   ) {
-    return this.service.updateBookingStatus(req.user.userId, id, data.status);
+    return this.service.updateBookingStatus(req.user.id, id, data.status);
   }
 
   // Admin views all bookings

@@ -17,21 +17,21 @@ export class CustomerAccountController {
 
   @Get('bookings')
   getBookings(@Request() req: any) {
-    return this.service.getBookings(req.user.userId);
+    return this.service.getBookings(req.user.id);
   }
 
   @Get('favorites')
   getFavorites(@Request() req: any) {
-    return this.service.getFavorites(req.user.userId);
+    return this.service.getFavorites(req.user.id);
   }
 
   @Post('favorites/:businessId')
   addFavorite(@Request() req: any, @Param('businessId') businessId: string) {
-    return this.service.addFavorite(req.user.userId, businessId);
+    return this.service.addFavorite(req.user.id, businessId);
   }
 
   @Delete('favorites/:businessId')
   removeFavorite(@Request() req: any, @Param('businessId') businessId: string) {
-    return this.service.removeFavorite(req.user.userId, businessId);
+    return this.service.removeFavorite(req.user.id, businessId);
   }
 }

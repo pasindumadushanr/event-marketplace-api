@@ -149,7 +149,7 @@ export class AdminCmsController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    return this.service.createBlogPost(body, req.user.userId, file);
+    return this.service.createBlogPost(body, req.user.id, file);
   }
 
   @Patch('blog/:id')

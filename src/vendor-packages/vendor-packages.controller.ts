@@ -22,12 +22,12 @@ export class VendorPackagesController {
 
   @Get()
   getPackages(@Request() req: any) {
-    return this.service.getPackages(req.user.userId);
+    return this.service.getPackages(req.user.id);
   }
 
   @Post()
   createPackage(@Request() req: any, @Body() data: any) {
-    return this.service.createPackage(req.user.userId, data);
+    return this.service.createPackage(req.user.id, data);
   }
 
   @Patch(':id')
@@ -36,11 +36,11 @@ export class VendorPackagesController {
     @Param('id') id: string,
     @Body() data: any,
   ) {
-    return this.service.updatePackage(req.user.userId, id, data);
+    return this.service.updatePackage(req.user.id, id, data);
   }
 
   @Delete(':id')
   deletePackage(@Request() req: any, @Param('id') id: string) {
-    return this.service.deletePackage(req.user.userId, id);
+    return this.service.deletePackage(req.user.id, id);
   }
 }
