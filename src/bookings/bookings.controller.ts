@@ -60,15 +60,22 @@ export class BookingsController {
     return this.service.updateBookingStatusAdmin(id, data.status);
   }
 
+  // Get single booking details
+  @Get(':id')
+  @Roles('CUSTOMER', 'VENDOR', 'ADMIN', 'SUPER_ADMIN')
+  getBookingById(@Request() req: any, @Param('id') id: string) {
+    return this.service.getBookingById(req.user.id, id);
+  }
+
   // Mock Payment Flow
   @Post(':id/payment/create')
-  @Roles('CUSTOMER')
+  @Roles('CUSTOMER', 'VENDOR', 'ADMIN', 'SUPER_ADMIN')
   createPayment(@Request() req: any, @Param('id') id: string) {
     return this.service.createMockPayment(req.user.id, id);
   }
 
   @Post(':id/payment/confirm')
-  @Roles('CUSTOMER')
+  @Roles('CUSTOMER', 'VENDOR', 'ADMIN', 'SUPER_ADMIN')
   confirmPayment(@Request() req: any, @Param('id') id: string) {
     return this.service.confirmMockPayment(req.user.id, id);
   }
