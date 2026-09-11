@@ -210,4 +210,39 @@ export class DiscoveryService {
       startingPrice,
     };
   }
+
+  async getFeaturedPackages(limit = 4) {
+    const packages = await (this.prisma as any).package.findMany({
+      where: {
+        status: 'ACTIVE',
+        business: {
+          status: 'ACTIVE',
+          vendorStatus: 'APPROVED',
+        },
+      },
+      include: {
+        business: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            coverImage: true,
+            logo: true,
+            profileSettings: true,
+            category: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Number(limit) || 4,
+    });
+
+    return packages.map((pkg: any) => ({
+      ...pkg,
+      price:
+        typeof pkg.price === 'object' && pkg.price !== null
+          ? Number(pkg.price.toString())
+          : Number(pkg.price),
+    }));
+  }
 }

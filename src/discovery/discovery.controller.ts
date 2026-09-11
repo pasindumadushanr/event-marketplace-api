@@ -16,6 +16,11 @@ export class DiscoveryController {
     return this.discoveryService.search(query);
   }
 
+  @Get('packages')
+  getFeaturedPackages(@Query('limit') limit?: number) {
+    return this.discoveryService.getFeaturedPackages(limit);
+  }
+
   @Get('vendors/:identifier')
   async getVendorProfile(@Param('identifier') identifier: string) {
     const profile = await this.discoveryService.getVendorProfile(identifier);
