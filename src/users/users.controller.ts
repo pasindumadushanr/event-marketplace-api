@@ -13,6 +13,9 @@ import {
   BadRequestException,
   Inject,
   Delete,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -103,11 +106,17 @@ export class UsersController {
   })
   async uploadAvatar(
     @Request() req: any,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/i }),
+        ],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
 
     // Upload to Cloudinary
     const url = await this.storageProvider.uploadFile(file, 'avatars');

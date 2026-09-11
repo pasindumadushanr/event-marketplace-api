@@ -57,6 +57,11 @@ export class EmailService {
     return this.sendMail(email, 'Your Verification Code - LuxeEvents', html);
   }
 
+  async sendPasswordResetEmail(email: string, name: string, otp: string) {
+    const html = EmailTemplates.getPasswordResetTemplate(name, otp);
+    return this.sendMail(email, 'Reset Your Password - LuxeEvents', html);
+  }
+
   async sendNewVendorApplicationNotification(
     adminEmail: string,
     vendorName: string,

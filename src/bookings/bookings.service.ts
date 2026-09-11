@@ -182,4 +182,36 @@ export class BookingsService {
       },
     });
   }
+
+  // Customer cancels their own booking
+  async cancelCustomerBooking(customerId: string, bookingId: string, reason?: string) {
+    const booking = await (this.prisma as any).booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    if (booking.customerId !== customerId) {
+      throw new BadRequestException('You are not authorized to cancel this booking');
+    }
+
+    if (booking.status === 'COMPLETED') {
+      throw new BadRequestException('Completed bookings cannot be cancelled');
+    }
+
+    if (booking.status === 'CANCELLED') {
+      throw new BadRequestException('Booking is already cancelled');
+    }
+
+    const cancellationNote = reason
+      ? `${booking.notes ? booking.notes + ' | ' : ''}[Customer Cancellation: ${reason}]`
+      : booking.notes;
+
+    return (this.prisma as any).booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'CANCELLED',
+        notes: cancellationNote,
+      },
+    });
+  }
 }

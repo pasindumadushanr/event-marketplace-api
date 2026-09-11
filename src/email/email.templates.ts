@@ -87,4 +87,18 @@ export const EmailTemplates = {
       <p style="color: #94a3b8; font-size: 12px;">To stop receiving these emails, update your email notification settings in your Vendor Dashboard.</p>
     </div>
   `,
+
+  getPasswordResetTemplate: (name: string, otp: string) => `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #0f172a;">Reset your LuxeEvents password</h2>
+      <p style="color: #475569; line-height: 1.6;">Hi ${name},</p>
+      <p style="color: #475569; line-height: 1.6;">We received a request to reset the password for your LuxeEvents account. Please use the following 6-digit recovery code. This code will expire in 15 minutes.</p>
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #0f172a;">${otp}</span>
+      </div>
+      <p style="color: #475569; line-height: 1.6;">If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+      <p style="color: #94a3b8; font-size: 12px;">LuxeEvents Security Team</p>
+    </div>
+  `,
 };

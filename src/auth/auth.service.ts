@@ -245,4 +245,66 @@ export class AuthService {
 
     return { message: 'Email verified successfully' };
   }
+
+  async forgotPassword(email: string) {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const user = await this.usersService.findByEmail(email.toLowerCase().trim());
+    if (!user) {
+      return { message: 'If an account exists with this email, a reset code has been sent.' };
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 15);
+
+    await this.usersService.updateUser(user.id, {
+      emailVerificationOtp: otp,
+      emailVerificationOtpExpiry: expiry,
+    });
+
+    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, otp);
+
+    return { message: 'If an account exists with this email, a reset code has been sent.' };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    if (!email || !otp || !newPassword) {
+      throw new BadRequestException('Email, OTP, and new password are required');
+    }
+
+    const user = await this.usersService.findByEmail(email.toLowerCase().trim());
+    if (!user) {
+      throw new BadRequestException('Invalid email or reset code');
+    }
+
+    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('No password reset requested');
+    }
+
+    if (new Date() > user.emailVerificationOtpExpiry) {
+      throw new BadRequestException('Reset code has expired. Please request a new one.');
+    }
+
+    if (user.emailVerificationOtp !== otp.trim()) {
+      throw new BadRequestException('Invalid reset code');
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await this.usersService.updateUser(user.id, {
+      password: hashedPassword,
+      emailVerificationOtp: null,
+      emailVerificationOtpExpiry: null,
+    });
+
+    return { message: 'Password reset successfully. You can now log in.' };
+  }
 }

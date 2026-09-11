@@ -79,4 +79,16 @@ export class BookingsController {
   confirmPayment(@Request() req: any, @Param('id') id: string) {
     return this.service.confirmMockPayment(req.user.id, id);
   }
+
+  // Customer cancels booking
+  @Patch(':id/cancel')
+  @Roles('CUSTOMER', 'VENDOR', 'ADMIN', 'SUPER_ADMIN')
+  cancelBooking(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body?: { reason?: string },
+  ) {
+    return this.service.cancelCustomerBooking(req.user.id, id, body?.reason);
+  }
 }
+

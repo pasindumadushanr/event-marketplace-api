@@ -8,6 +8,9 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
   Request,
 } from '@nestjs/common';
 import { VendorDocumentsService } from './vendor-documents.service';
@@ -34,7 +37,16 @@ export class VendorDocumentsController {
   uploadDocument(
     @Request() req: any,
     @Body('type') type: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /(pdf|jpg|jpeg|png)$/i }),
+        ],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
   ) {
     return this.vendorDocumentsService.uploadDocument(req.user.id, type, file);
   }

@@ -92,13 +92,20 @@ export class UsersService {
   }
 
   async updateMe(id: string, data: any) {
-    const { password, ...rest } = data;
+    const allowedFields = ['firstName', 'lastName', 'phone', 'email', 'profileImage'];
+    const updateData: any = {};
+
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
 
     // Check if email or phone is already taken by someone else
-    if (rest.email || rest.phone) {
+    if (updateData.email || updateData.phone) {
       const orConditions: any[] = [];
-      if (rest.email) orConditions.push({ email: rest.email });
-      if (rest.phone) orConditions.push({ phone: rest.phone });
+      if (updateData.email) orConditions.push({ email: updateData.email });
+      if (updateData.phone) orConditions.push({ phone: updateData.phone });
 
       const existingUser = await this.prisma.user.findFirst({
         where: {
@@ -108,20 +115,18 @@ export class UsersService {
       });
 
       if (existingUser) {
-        if (existingUser.email === rest.email) {
+        if (existingUser.email === updateData.email) {
           throw new ConflictException('Email already in use');
         }
-        if (existingUser.phone === rest.phone) {
+        if (existingUser.phone === updateData.phone) {
           throw new ConflictException('Phone number already in use');
         }
       }
     }
 
-    const updateData: any = { ...rest };
-
-    if (password) {
+    if (data.password) {
       const salt = await bcrypt.genSalt(10);
-      updateData.password = await bcrypt.hash(password, salt);
+      updateData.password = await bcrypt.hash(data.password, salt);
     }
 
     return this.prisma.user.update({
