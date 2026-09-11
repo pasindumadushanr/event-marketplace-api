@@ -30,6 +30,9 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ChatModule } from './chat/chat.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PackageTemplatesModule } from './package-templates/package-templates.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -39,6 +42,12 @@ import { PackageTemplatesModule } from './package-templates/package-templates.mo
       serveRoot: '/uploads',
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -57,6 +66,7 @@ import { PackageTemplatesModule } from './package-templates/package-templates.mo
     AdminCmsModule,
     PaymentsModule,
     VendorReviewsModule,
+    ReviewsModule,
     VendorRevenueModule,
     VendorDocumentsModule,
     AdminDashboardModule,
@@ -66,6 +76,12 @@ import { PackageTemplatesModule } from './package-templates/package-templates.mo
     PackageTemplatesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
