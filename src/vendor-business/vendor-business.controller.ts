@@ -73,8 +73,18 @@ export class VendorBusinessController {
     return this.service.publishMyBusiness(req.user.id);
   }
 
+  @Post('publish')
+  publishMyBusinessPost(@Request() req: any) {
+    return this.service.publishMyBusiness(req.user.id);
+  }
+
   @Patch('unpublish')
   unpublishMyBusiness(@Request() req: any) {
+    return this.service.unpublishMyBusiness(req.user.id);
+  }
+
+  @Post('unpublish')
+  unpublishMyBusinessPost(@Request() req: any) {
     return this.service.unpublishMyBusiness(req.user.id);
   }
 }
