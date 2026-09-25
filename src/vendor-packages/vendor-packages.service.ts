@@ -28,6 +28,7 @@ export class VendorPackagesService {
       data: {
         name: data.name,
         description: data.description,
+        image: data.image || null,
         price: data.price,
         features: data.features || [],
         duration: data.duration,
@@ -50,6 +51,7 @@ export class VendorPackagesService {
       data: {
         name: data.name,
         description: data.description,
+        image: data.image !== undefined ? (data.image || null) : undefined,
         price: data.price,
         features: data.features,
         duration: data.duration,

@@ -192,6 +192,7 @@ model Package {
   business    Business  @relation(fields: [businessId], references: [id])
   name        String
   description String?
+  image       String?
   price       Decimal   @db.Decimal(10, 2)
   features    String[]
   duration    String?
