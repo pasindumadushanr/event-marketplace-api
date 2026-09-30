@@ -2,6 +2,7 @@ import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
+import { currentBrandContent } from './brand-content';
 
 @Injectable()
 export class AdminCmsService {
@@ -12,16 +13,20 @@ export class AdminCmsService {
 
   // Banners
   async getBanners() {
-    return this.prisma.banner.findMany({
-      orderBy: { sortOrder: 'asc' },
-    });
+    return this.prisma.banner
+      .findMany({
+        orderBy: { sortOrder: 'asc' },
+      })
+      .then(currentBrandContent);
   }
 
   async getActiveBanners() {
-    return this.prisma.banner.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-    });
+    return this.prisma.banner
+      .findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      })
+      .then(currentBrandContent);
   }
 
   async createBanner(data: any, file?: Express.Multer.File) {
@@ -86,9 +91,11 @@ export class AdminCmsService {
 
   // FAQs
   async getFaqs() {
-    return this.prisma.faq.findMany({
-      orderBy: { sortOrder: 'asc' },
-    });
+    return this.prisma.faq
+      .findMany({
+        orderBy: { sortOrder: 'asc' },
+      })
+      .then(currentBrandContent);
   }
 
   async createFaq(data: any) {
@@ -116,9 +123,11 @@ export class AdminCmsService {
 
   // Pages
   async getPages() {
-    return this.prisma.page.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.prisma.page
+      .findMany({
+        orderBy: { createdAt: 'desc' },
+      })
+      .then(currentBrandContent);
   }
 
   async getPageBySlug(slug: string, publicOnly = false) {
@@ -126,7 +135,7 @@ export class AdminCmsService {
     if (!page) throw new NotFoundException('Page not found');
     if (publicOnly && page.status !== 'PUBLISHED')
       throw new NotFoundException('Page not found');
-    return page;
+    return currentBrandContent(page);
   }
 
   async createPage(data: any) {
@@ -162,24 +171,28 @@ export class AdminCmsService {
 
   // Blog Posts
   async getBlogPosts() {
-    return this.prisma.blogPost.findMany({
-      include: {
-        author: { select: { firstName: true, lastName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.prisma.blogPost
+      .findMany({
+        include: {
+          author: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+      .then(currentBrandContent);
   }
 
   async getPublishedBlogPosts() {
-    return this.prisma.blogPost.findMany({
-      where: { status: 'PUBLISHED' },
-      include: {
-        author: {
-          select: { firstName: true, lastName: true, profileImage: true },
+    return this.prisma.blogPost
+      .findMany({
+        where: { status: 'PUBLISHED' },
+        include: {
+          author: {
+            select: { firstName: true, lastName: true, profileImage: true },
+          },
         },
-      },
-      orderBy: { publishedAt: 'desc' },
-    });
+        orderBy: { publishedAt: 'desc' },
+      })
+      .then(currentBrandContent);
   }
 
   async getBlogPostBySlug(slug: string, publicOnly = false) {
@@ -194,7 +207,7 @@ export class AdminCmsService {
     if (!post) throw new NotFoundException('Blog post not found');
     if (publicOnly && post.status !== 'PUBLISHED')
       throw new NotFoundException('Blog post not found');
-    return post;
+    return currentBrandContent(post);
   }
 
   async createBlogPost(
@@ -271,7 +284,7 @@ export class AdminCmsService {
     const setting = await this.prisma.setting.findUnique({
       where: { key },
     });
-    return setting ? setting.value : null;
+    return setting ? currentBrandContent(setting.value) : null;
   }
 
   async upsertSetting(key: string, value: any) {

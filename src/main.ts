@@ -21,6 +21,9 @@ async function bootstrap() {
 
   // 2. Strict Production CORS Protection
   const allowedOrigins = [
+    'https://nakathata.lk',
+    'https://www.nakathata.lk',
+    // Keep the existing deployment working during the domain cutover.
     'https://luxeevents.fun',
     'https://www.luxeevents.fun',
     'http://localhost:3000',
@@ -53,8 +56,8 @@ async function bootstrap() {
   // 3. Hide Swagger documentation in production
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Event Marketplace API')
-      .setDescription('The Event Marketplace API description')
+      .setTitle('Nakathata.lk API')
+      .setDescription('The Nakathata.lk API description')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

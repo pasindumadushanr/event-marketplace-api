@@ -26,7 +26,7 @@ export class EmailService {
 
   async sendContactConfirmation(email: string, name: string) {
     const html = EmailTemplates.getContactConfirmationTemplate(name);
-    return this.sendMail(email, 'We received your inquiry - LuxeEvents', html);
+    return this.sendMail(email, 'We received your inquiry - Nakathata.lk', html);
   }
 
   async sendAdminContactNotification(
@@ -47,19 +47,19 @@ export class EmailService {
     const html = EmailTemplates.getVendorApprovalTemplate(name);
     return this.sendMail(
       email,
-      'Your Vendor Account is Approved! - LuxeEvents',
+      'Your Vendor Account is Approved! - Nakathata.lk',
       html,
     );
   }
 
   async sendOtpEmail(email: string, name: string, otp: string) {
     const html = EmailTemplates.getOtpVerificationTemplate(name, otp);
-    return this.sendMail(email, 'Your Verification Code - LuxeEvents', html);
+    return this.sendMail(email, 'Your Verification Code - Nakathata.lk', html);
   }
 
   async sendPasswordResetEmail(email: string, name: string, otp: string) {
     const html = EmailTemplates.getPasswordResetTemplate(name, otp);
-    return this.sendMail(email, 'Reset Your Password - LuxeEvents', html);
+    return this.sendMail(email, 'Reset Your Password - Nakathata.lk', html);
   }
 
   async sendNewVendorApplicationNotification(

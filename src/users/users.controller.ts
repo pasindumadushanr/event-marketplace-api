@@ -50,10 +50,10 @@ export class UsersController {
 
     if (body.method === 'EMAIL') {
       const html = `<div style="font-family: sans-serif; color: #333;">
-        <h2>Message from LuxeEvents Admin</h2>
+        <h2>Message from Nakathata.lk Admin</h2>
         <p>${body.message.replace(/\n/g, '<br/>')}</p>
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #eaeaea;" />
-        <p style="font-size: 12px; color: #888;">This is an automated message from the LuxeEvents administration team.</p>
+        <p style="font-size: 12px; color: #888;">This is an automated message from the Nakathata.lk administration team.</p>
       </div>`;
       await this.emailService.sendMail(user.email, body.subject, html);
       return { success: true, message: 'Email sent successfully' };

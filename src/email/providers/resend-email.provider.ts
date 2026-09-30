@@ -22,11 +22,11 @@ export class ResendEmailProvider implements IEmailProvider {
     try {
       const fromEmail = this.configService.get<string>(
         'SMTP_FROM_EMAIL',
-        'noreply@eventmarketplace.com',
+        'noreply@nakathata.lk',
       );
 
       const { data, error } = await this.resend.emails.send({
-        from: `Event Marketplace <${fromEmail}>`,
+        from: `Nakathata.lk <${fromEmail}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,

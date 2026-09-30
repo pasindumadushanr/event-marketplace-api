@@ -36,7 +36,7 @@ export class ContactService {
     // Send notification to the admin
     const adminEmail = this.configService.get<string>(
       'SMTP_FROM_EMAIL',
-      'admin@luxeevents.com',
+      'admin@nakathata.lk',
     );
     await this.emailService.sendAdminContactNotification(
       adminEmail,
