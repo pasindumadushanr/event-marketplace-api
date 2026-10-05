@@ -60,6 +60,7 @@ export class CustomerAccountService {
         ...favorite,
         business: {
           ...publicFields,
+          isVerified: false,
           available,
           services: available ? packages.map((item) => item.name) : [],
           startingPrice: available && prices.length ? Math.min(...prices) : 0,

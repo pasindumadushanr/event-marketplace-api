@@ -11,6 +11,7 @@ import {
   taxonomyRows,
 } from '../business-categories/category-taxonomy';
 import { readCategories } from '../business-categories/category-reader';
+import { withReviewEvidence } from '../reviews/review-evidence';
 
 @Injectable()
 export class DiscoveryService {
@@ -186,7 +187,8 @@ export class DiscoveryService {
         name: b.name,
         coverImage: b.coverImage,
         logo: b.logo,
-        isVerified: b.isVerified,
+        // Legacy flags have no recorded identity/registration evidence.
+        isVerified: false,
         city: b.city,
         category: b.category,
         startingPrice,
@@ -234,6 +236,7 @@ export class DiscoveryService {
           vendorStatus: 'APPROVED',
         },
         include: {
+          vendor: { select: { emailVerified: true } },
           category: { select: { name: true, id: true } },
           galleries: { orderBy: { sortOrder: 'asc' } },
           packages: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } },
@@ -263,6 +266,7 @@ export class DiscoveryService {
           profileSettings: { path: ['seo', 'slug'], equals: identifier },
         },
         include: {
+          vendor: { select: { emailVerified: true } },
           category: { select: { name: true, id: true } },
           galleries: { orderBy: { sortOrder: 'asc' } },
           packages: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } },
@@ -302,7 +306,7 @@ export class DiscoveryService {
         ? Number(startingPriceObj.toString())
         : Number(startingPriceObj);
 
-    const { bookings, ...publicBusiness } = business;
+    const { bookings, vendor, verificationDocs, ...publicBusiness } = business;
     const capacity = Number(business.profileSettings?.maxBookingsPerDay) || 1;
     const counts = new Map<string, number>();
     for (const item of bookings || []) {
@@ -311,6 +315,19 @@ export class DiscoveryService {
     }
     return {
       ...publicBusiness,
+      isVerified: false,
+      verification: {
+        isBusinessVerified: false,
+        isEmailVerified: vendor?.emailVerified === true,
+        isPhoneVerified: false,
+        isIdentityVerified: false,
+        isRegistrationVerified: false,
+      },
+      reviews: await withReviewEvidence(
+        this.prisma,
+        business.id,
+        business.reviews,
+      ),
       unavailableDates: [
         ...new Set([
           ...(Array.isArray(business.profileSettings?.blockedDates)
