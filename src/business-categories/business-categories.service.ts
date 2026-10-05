@@ -5,18 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { descendantIds, isCategoryActive } from './category-tree';
+import { readCategories } from './category-reader';
 
 @Injectable()
 export class BusinessCategoriesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(includeInactive = false) {
-    const categories = await this.prisma.businessCategory.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: {
-        _count: { select: { businesses: { where: { status: 'ACTIVE' } } } },
-      },
-    });
+    const { rows: categories } = await readCategories(this.prisma, true);
     const visible = includeInactive
       ? categories
       : categories.filter((node) => isCategoryActive(categories, node.id));
@@ -26,7 +22,7 @@ export class BusinessCategoriesService {
         ...node,
         businessCount: visible
           .filter((item) => ids.has(item.id))
-          .reduce((sum, item) => sum + item._count.businesses, 0),
+          .reduce((sum, item) => sum + (item._count?.businesses || 0), 0),
       };
     });
   }

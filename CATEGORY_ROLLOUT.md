@@ -33,6 +33,11 @@ Rollback: revert application releases first. Keep the nullable parentId column a
 new category rows; do not drop them or undo vendor mappings without using the backup.
 No production database commands are automatically run by application startup.
 
+Category reads tolerate a missing parentId column during deployment by selecting
+the existing flat category fields. Render logs a warning until the migration is
+applied. This keeps browsing and vendor selection available; it does not install
+the new hierarchy or hide other database errors.
+
 The updated attire catalog includes Kandyan, Western, Muslim, Hindu/Indian, and
 pre-shoot bridal options, plus Kandyan, Western, Muslim, and Hindu/Indian groom
 options. Renamed attire service rows retain their existing IDs when possible;

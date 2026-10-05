@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { isCategoryActive } from '../business-categories/category-tree';
+import { readCategories } from '../business-categories/category-reader';
 
 @Injectable()
 export class VendorBusinessService {
@@ -30,7 +31,7 @@ export class VendorBusinessService {
   }
 
   async submitOnboarding(vendorId: string, data: any) {
-    const categories = await this.prisma.businessCategory.findMany();
+    const { rows: categories } = await readCategories(this.prisma);
     if (!isCategoryActive(categories, data.categoryId)) throw new BadRequestException('Choose an active business category.');
     const existing = await (this.prisma as any).business.findFirst({
       where: { vendorId },
@@ -118,7 +119,7 @@ export class VendorBusinessService {
 
     // Merge profileSettings if provided
     if (data.categoryId !== undefined && data.categoryId !== business.categoryId) {
-      const categories = await this.prisma.businessCategory.findMany();
+      const { rows: categories } = await readCategories(this.prisma);
       if (!isCategoryActive(categories, data.categoryId)) throw new BadRequestException('Choose an active business category.');
     }
     if (data.profileSettings) {

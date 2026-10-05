@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { descendantIds, isCategoryActive } from '../business-categories/category-tree';
-import { legacyCategoryTargets, serviceCategoryAliases } from '../business-categories/category-taxonomy';
+import { legacyCategoryTargets, serviceCategoryAliases, taxonomyRows } from '../business-categories/category-taxonomy';
+import { readCategories } from '../business-categories/category-reader';
 
 @Injectable()
 export class DiscoveryService {
@@ -45,14 +46,21 @@ export class DiscoveryService {
     }
 
     if (categoryId || categorySlug) {
-      const nodes = await this.prisma.businessCategory.findMany();
+      const { rows: nodes, hierarchyAvailable } = await readCategories(this.prisma);
       const requested = categoryId
         ? nodes.find((node) => node.id === String(categoryId))
         : nodes.find((node) => node.slug === String(categorySlug));
       const aliasSlug = requested?.slug || String(categorySlug);
       const target = requested?.status === 'ACTIVE' ? requested : nodes.find((node) => node.slug === (serviceCategoryAliases[aliasSlug] || legacyCategoryTargets[aliasSlug]));
+      let ids = target ? descendantIds(nodes, target.id) : [];
+      if (!target && !hierarchyAvailable && categorySlug && !categoryId) {
+        const catalog = taxonomyRows();
+        let row = catalog.find((item) => item.slug === String(categorySlug));
+        while (row?.parentSlug) row = catalog.find((item) => item.slug === row!.parentSlug);
+        if (row) ids = nodes.filter((node) => legacyCategoryTargets[node.slug] === row!.slug && node.status === 'ACTIVE').map((node) => node.id);
+      }
       const visible = nodes.filter((node) => isCategoryActive(nodes, node.id));
-      where.categoryId = { in: target && visible.some((node) => node.id === target.id) ? descendantIds(visible, target.id) : [] };
+      where.categoryId = { in: ids.filter((id) => visible.some((node) => node.id === id)) };
     }
 
     if (city) {
