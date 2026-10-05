@@ -10,10 +10,18 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
+import { WsException } from '@nestjs/websockets';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // In production, restrict this to frontend URL
+    origin: [
+      process.env.FRONTEND_URL,
+      'https://nakathata.lk',
+      'https://www.nakathata.lk',
+      'https://luxeevents.fun',
+      'https://www.luxeevents.fun',
+      'http://localhost:3000',
+    ].filter(Boolean) as string[],
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -52,11 +60,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('join_conversation')
-  handleJoinConversation(
+  async handleJoinConversation(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
-    // Join the specific conversation room
+    await this.authorize(client, data.conversationId);
     client.join(`conversation_${data.conversationId}`);
     return { event: 'joined', data: data.conversationId };
   }
@@ -75,6 +83,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string; content: string },
   ) {
+    await this.authorize(client, data.conversationId);
     const userId = client.data.user.sub;
 
     // Save to database
@@ -94,5 +103,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // but the frontend can also just listen to 'receive_message' if they are in the conversation room.
 
     return message;
+  }
+
+  private async authorize(client: Socket, conversationId: string) {
+    if (!client.data?.user?.sub)
+      throw new WsException('Authentication required');
+    try {
+      await this.chatService.assertParticipant(
+        conversationId,
+        client.data.user.sub,
+      );
+    } catch {
+      throw new WsException('Conversation access denied');
+    }
   }
 }

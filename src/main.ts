@@ -5,16 +5,27 @@ import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as dns from 'dns';
+import { ApiErrorFilter } from './common/api-error.filter';
 
 async function bootstrap() {
   dns.setDefaultResultOrder('ipv4first');
 
   if (!process.env.JWT_SECRET) {
-    console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start.');
+    console.error(
+      '❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start.',
+    );
     process.exit(1);
   }
 
   const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new ApiErrorFilter());
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !['smtp', 'resend'].includes(process.env.SMTP_PROVIDER || '')
+  )
+    console.warn(
+      'EMAIL_NOT_CONFIGURED: Set SMTP_PROVIDER and the provider credentials in Render. Mock email cannot deliver verification codes.',
+    );
 
   // 1. HTTP Security Headers
   app.use(helmet({ crossOriginResourcePolicy: false }));
@@ -32,7 +43,11 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         callback(null, true);
       } else {
         callback(new Error(`Origin ${origin} not allowed by CORS`));

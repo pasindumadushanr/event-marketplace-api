@@ -5,28 +5,69 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { bookingDay, todayInSriLanka } from './booking-day';
 
 @Injectable()
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
+  private async assertAvailable(
+    tx: any,
+    businessId: string,
+    day: ReturnType<typeof bookingDay>,
+    excludeId?: string,
+  ) {
+    // Lock the vendor while checking and writing to prevent concurrent confirmations.
+    await tx.$queryRaw`SELECT "id" FROM "Business" WHERE "id" = ${businessId}::uuid FOR UPDATE`;
+    const business = await tx.business.findUnique({
+      where: { id: businessId },
+    });
+    if (
+      !business ||
+      business.status !== 'ACTIVE' ||
+      business.vendorStatus !== 'APPROVED'
+    )
+      throw new BadRequestException('This business is not accepting bookings');
+    if (business.profileSettings?.blockedDates?.includes(day.key))
+      throw new BadRequestException('The vendor is unavailable on this date');
+    const booked = await tx.booking.count({
+      where: {
+        businessId,
+        id: excludeId ? { not: excludeId } : undefined,
+        date: { gte: day.date, lt: day.end },
+        status: { in: ['CONFIRMED', 'COMPLETED'] },
+      },
+    });
+    const capacity = Number(business.profileSettings?.maxBookingsPerDay) || 1;
+    if (booked >= capacity)
+      throw new BadRequestException('The vendor is fully booked on this date');
+  }
+
   // For Customers
   async createBooking(customerId: string, data: any) {
-    const pkg = await (this.prisma as any).package.findUnique({
-      where: { id: data.packageId },
-    });
-    if (!pkg) throw new NotFoundException('Package not found');
+    const day = bookingDay(data.date);
+    if (day.key < todayInSriLanka())
+      throw new BadRequestException('Choose today or a future date');
+    return this.prisma.$transaction(async (tx) => {
+      const pkg = await tx.package.findUnique({
+        where: { id: data.packageId },
+      });
+      if (!pkg) throw new NotFoundException('Package not found');
+      if (pkg.status !== 'ACTIVE')
+        throw new BadRequestException('This service is not available');
+      await this.assertAvailable(tx, pkg.businessId, day);
 
-    return (this.prisma as any).booking.create({
-      data: {
-        customerId,
-        businessId: pkg.businessId,
-        packageId: pkg.id,
-        date: new Date(data.date),
-        totalAmount: pkg.price,
-        notes: data.notes,
-        status: 'PENDING',
-      },
+      return tx.booking.create({
+        data: {
+          customerId,
+          businessId: pkg.businessId,
+          packageId: pkg.id,
+          date: day.date,
+          totalAmount: pkg.price,
+          notes: data.notes,
+          status: 'PENDING',
+        },
+      });
     });
   }
 
@@ -81,9 +122,18 @@ export class BookingsService {
       throw new BadRequestException('Invalid status');
     }
 
-    return (this.prisma as any).booking.update({
-      where: { id: bookingId },
-      data: { status },
+    return this.prisma.$transaction(async (tx) => {
+      if (status === 'CONFIRMED')
+        await this.assertAvailable(
+          tx,
+          business.id,
+          bookingDay(booking.date),
+          booking.id,
+        );
+      return tx.booking.update({
+        where: { id: bookingId },
+        data: { status: status as any },
+      });
     });
   }
 
@@ -120,13 +170,22 @@ export class BookingsService {
       throw new BadRequestException('Invalid status');
     }
 
-    return (this.prisma as any).booking.update({
-      where: { id: bookingId },
-      data: { status },
+    return this.prisma.$transaction(async (tx) => {
+      if (status === 'CONFIRMED')
+        await this.assertAvailable(
+          tx,
+          booking.businessId,
+          bookingDay(booking.date),
+          booking.id,
+        );
+      return tx.booking.update({
+        where: { id: bookingId },
+        data: { status: status as any },
+      });
     });
   }
 
-  async getBookingById(userId: string, bookingId: string) {
+  async getBookingById(userId: string, bookingId: string, roleName?: string) {
     const booking = await (this.prisma as any).booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -138,6 +197,7 @@ export class BookingsService {
             logo: true,
             coverImage: true,
             category: { select: { name: true } },
+            vendorId: true,
           },
         },
         package: true,
@@ -152,6 +212,13 @@ export class BookingsService {
       },
     });
     if (!booking) throw new NotFoundException('Booking not found');
+    if (
+      booking.customerId !== userId &&
+      booking.business.vendorId !== userId &&
+      !['ADMIN', 'SUPER_ADMIN'].includes(roleName || '')
+    ) {
+      throw new ForbiddenException('Not authorized to view this booking');
+    }
     return booking;
   }
 
@@ -184,14 +251,20 @@ export class BookingsService {
   }
 
   // Customer cancels their own booking
-  async cancelCustomerBooking(customerId: string, bookingId: string, reason?: string) {
+  async cancelCustomerBooking(
+    customerId: string,
+    bookingId: string,
+    reason?: string,
+  ) {
     const booking = await (this.prisma as any).booking.findUnique({
       where: { id: bookingId },
     });
     if (!booking) throw new NotFoundException('Booking not found');
 
     if (booking.customerId !== customerId) {
-      throw new BadRequestException('You are not authorized to cancel this booking');
+      throw new BadRequestException(
+        'You are not authorized to cancel this booking',
+      );
     }
 
     if (booking.status === 'COMPLETED') {

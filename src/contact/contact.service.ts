@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateContactDto } from './dto/create-contact.dto';
@@ -6,6 +6,30 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ContactService {
+  async subscribeNewsletter(dto: { email: string; consent: boolean }) {
+    const email = dto.email.trim().toLowerCase();
+    // Keep subscriptions in the existing private admin inbox, without a new table.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`newsletter:${email}`}))::text AS locked`;
+      const existing = await tx.contactSubmission.findFirst({
+        where: { email, subject: 'NEWSLETTER_SUBSCRIPTION' },
+      });
+      if (!existing)
+        await tx.contactSubmission.create({
+          data: {
+            name: 'Newsletter subscriber',
+            email,
+            subject: 'NEWSLETTER_SUBSCRIPTION',
+            message: JSON.stringify({
+              consent: true,
+              source: 'website-footer',
+              subscribedAt: new Date().toISOString(),
+            }),
+          },
+        });
+    });
+    return { success: true, message: 'Your newsletter signup has been saved.' };
+  }
   private readonly logger = new Logger(ContactService.name);
 
   constructor(
@@ -15,6 +39,8 @@ export class ContactService {
   ) {}
 
   async submitContactForm(dto: CreateContactDto) {
+    if (dto.subject === 'NEWSLETTER_SUBSCRIPTION')
+      throw new BadRequestException('Use the newsletter signup form');
     // 1. Save to Database
     const submission = await (this.prisma as any).contactSubmission.create({
       data: {

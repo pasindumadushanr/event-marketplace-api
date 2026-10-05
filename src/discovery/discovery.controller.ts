@@ -11,6 +11,11 @@ import { DiscoveryService } from './discovery.service';
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
+  @Get('sitemap')
+  sitemap() {
+    return this.discoveryService.getSitemap();
+  }
+
   @Get('search')
   search(@Query() query: any) {
     return this.discoveryService.search(query);

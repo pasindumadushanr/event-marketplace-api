@@ -200,10 +200,19 @@ export class AdminCmsController {
 
   @Get('public/settings/:key')
   async getSetting(@Param('key') key: string) {
+    if (!['FOOTER_CONTENT', 'social', 'seo'].includes(key))
+      throw new NotFoundException('Public setting not found');
     const setting = await this.service.getSetting(key);
     if (!setting) {
       throw new NotFoundException(`Setting ${key} not found`);
     }
     return setting;
+  }
+
+  @Get('settings/:key')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  async getPrivateSetting(@Param('key') key: string) {
+    return this.service.getSetting(key);
   }
 }

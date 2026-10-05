@@ -33,6 +33,7 @@ import { PackageTemplatesModule } from './package-templates/package-templates.mo
 import { ReviewsModule } from './reviews/reviews.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -75,7 +76,7 @@ import { APP_GUARD } from '@nestjs/core';
     NotificationsModule,
     PackageTemplatesModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [
     AppService,
     {

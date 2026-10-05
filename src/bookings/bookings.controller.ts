@@ -12,6 +12,7 @@ import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
+import { CreateBookingDto } from './create-booking.dto';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,7 +22,7 @@ export class BookingsController {
   // Customer creates a booking
   @Post()
   @Roles('CUSTOMER', 'VENDOR') // Allowing VENDOR so vendors can test it using their own accounts too
-  createBooking(@Request() req: any, @Body() data: any) {
+  createBooking(@Request() req: any, @Body() data: CreateBookingDto) {
     return this.service.createBooking(req.user.id, data);
   }
 
@@ -64,7 +65,7 @@ export class BookingsController {
   @Get(':id')
   @Roles('CUSTOMER', 'VENDOR', 'ADMIN', 'SUPER_ADMIN')
   getBookingById(@Request() req: any, @Param('id') id: string) {
-    return this.service.getBookingById(req.user.id, id);
+    return this.service.getBookingById(req.user.id, id, req.user.role?.name);
   }
 
   // Mock Payment Flow
@@ -91,4 +92,3 @@ export class BookingsController {
     return this.service.cancelCustomerBooking(req.user.id, id, body?.reason);
   }
 }
-

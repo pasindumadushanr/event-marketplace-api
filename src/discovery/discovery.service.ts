@@ -1,13 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { descendantIds, isCategoryActive } from '../business-categories/category-tree';
-import { legacyCategoryTargets, serviceCategoryAliases, taxonomyRows } from '../business-categories/category-taxonomy';
+import {
+  descendantIds,
+  isCategoryActive,
+} from '../business-categories/category-tree';
+import {
+  legacyCategoryTargets,
+  serviceCategoryAliases,
+  taxonomyRows,
+} from '../business-categories/category-taxonomy';
 import { readCategories } from '../business-categories/category-reader';
 
 @Injectable()
 export class DiscoveryService {
   constructor(private prisma: PrismaService) {}
+
+  async getSitemap() {
+    const businesses = await this.prisma.business.findMany({
+      where: { status: 'ACTIVE', vendorStatus: 'APPROVED' },
+      select: { id: true, updatedAt: true, profileSettings: true },
+      orderBy: { id: 'asc' },
+    });
+    return businesses.map((business) => ({
+      slug: (business.profileSettings as any)?.seo?.slug || business.id,
+      updatedAt: business.updatedAt,
+    }));
+  }
 
   async search(query: any) {
     const {
@@ -24,10 +43,32 @@ export class DiscoveryService {
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
+    if (
+      !Number.isInteger(Number(page)) ||
+      Number(page) < 1 ||
+      !Number.isInteger(take) ||
+      take < 1 ||
+      take > 100
+    )
+      throw new BadRequestException(
+        'Use a positive page and a limit between 1 and 100',
+      );
+    if (
+      ![minPrice, maxPrice].every(
+        (value) =>
+          value === undefined ||
+          (Number.isFinite(Number(value)) && Number(value) >= 0),
+      )
+    )
+      throw new BadRequestException('Prices must be non-negative numbers');
+    const aggregateSort = ['PRICE_ASC', 'PRICE_DESC', 'RATING_DESC'].includes(
+      sortBy,
+    );
 
     // Build the dynamic WHERE clause
     const where: Prisma.BusinessWhereInput = {
       status: 'ACTIVE', // Only show active businesses
+      vendorStatus: 'APPROVED',
       // Temporarily disabling subscription check for MVP testing
       // vendor: {
       //   vendorSubscriptions: {
@@ -46,21 +87,41 @@ export class DiscoveryService {
     }
 
     if (categoryId || categorySlug) {
-      const { rows: nodes, hierarchyAvailable } = await readCategories(this.prisma);
+      const { rows: nodes, hierarchyAvailable } = await readCategories(
+        this.prisma,
+      );
       const requested = categoryId
         ? nodes.find((node) => node.id === String(categoryId))
         : nodes.find((node) => node.slug === String(categorySlug));
       const aliasSlug = requested?.slug || String(categorySlug);
-      const target = requested?.status === 'ACTIVE' ? requested : nodes.find((node) => node.slug === (serviceCategoryAliases[aliasSlug] || legacyCategoryTargets[aliasSlug]));
+      const target =
+        requested?.status === 'ACTIVE'
+          ? requested
+          : nodes.find(
+              (node) =>
+                node.slug ===
+                (serviceCategoryAliases[aliasSlug] ||
+                  legacyCategoryTargets[aliasSlug]),
+            );
       let ids = target ? descendantIds(nodes, target.id) : [];
       if (!target && !hierarchyAvailable && categorySlug && !categoryId) {
         const catalog = taxonomyRows();
         let row = catalog.find((item) => item.slug === String(categorySlug));
-        while (row?.parentSlug) row = catalog.find((item) => item.slug === row!.parentSlug);
-        if (row) ids = nodes.filter((node) => legacyCategoryTargets[node.slug] === row!.slug && node.status === 'ACTIVE').map((node) => node.id);
+        while (row?.parentSlug)
+          row = catalog.find((item) => item.slug === row!.parentSlug);
+        if (row)
+          ids = nodes
+            .filter(
+              (node) =>
+                legacyCategoryTargets[node.slug] === row!.slug &&
+                node.status === 'ACTIVE',
+            )
+            .map((node) => node.id);
       }
       const visible = nodes.filter((node) => isCategoryActive(nodes, node.id));
-      where.categoryId = { in: ids.filter((id) => visible.some((node) => node.id === id)) };
+      where.categoryId = {
+        in: ids.filter((id) => visible.some((node) => node.id === id)),
+      };
     }
 
     if (city) {
@@ -70,6 +131,7 @@ export class DiscoveryService {
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.packages = {
         some: {
+          status: 'ACTIVE',
           price: {
             gte: minPrice !== undefined ? Number(minPrice) : undefined,
             lte: maxPrice !== undefined ? Number(maxPrice) : undefined,
@@ -91,6 +153,7 @@ export class DiscoveryService {
         include: {
           category: { select: { name: true } },
           packages: {
+            where: { status: 'ACTIVE' },
             select: { price: true },
             orderBy: { price: 'asc' },
           },
@@ -98,9 +161,8 @@ export class DiscoveryService {
             select: { rating: true },
           },
         },
-        skip,
-        take,
-        orderBy,
+        ...(aggregateSort ? {} : { skip, take }),
+        orderBy: [orderBy, { id: 'asc' }],
       }),
       (this.prisma as any).business.count({ where }),
     ]);
@@ -109,9 +171,10 @@ export class DiscoveryService {
     const mappedBusinesses = businesses.map((b) => {
       // Calculate Starting Price
       const startingPriceObj = b.packages.length > 0 ? b.packages[0].price : 0;
-      const startingPrice = typeof startingPriceObj === 'object' && startingPriceObj !== null 
-        ? Number(startingPriceObj.toString()) 
-        : Number(startingPriceObj);
+      const startingPrice =
+        typeof startingPriceObj === 'object' && startingPriceObj !== null
+          ? Number(startingPriceObj.toString())
+          : Number(startingPriceObj);
 
       // Calculate Average Rating
       const totalRatings = b.reviews.reduce((acc, rev) => acc + rev.rating, 0);
@@ -143,7 +206,9 @@ export class DiscoveryService {
     }
 
     return {
-      data: mappedBusinesses,
+      data: aggregateSort
+        ? mappedBusinesses.slice(skip, skip + take)
+        : mappedBusinesses,
       meta: {
         total,
         page: Number(page),
@@ -166,6 +231,7 @@ export class DiscoveryService {
         where: {
           id: identifier,
           status: 'ACTIVE',
+          vendorStatus: 'APPROVED',
         },
         include: {
           category: { select: { name: true, id: true } },
@@ -178,14 +244,23 @@ export class DiscoveryService {
               },
             },
             orderBy: { createdAt: 'desc' },
+          },
+          bookings: {
+            where: {
+              status: { in: ['CONFIRMED', 'COMPLETED'] },
+              date: { gte: new Date(new Date().toISOString().slice(0, 10)) },
+            },
+            select: { date: true },
           },
         },
       });
     } else {
       // Fallback for SEO Slug search
-      const allActive = await (this.prisma as any).business.findMany({
+      business = await (this.prisma as any).business.findFirst({
         where: {
           status: 'ACTIVE',
+          vendorStatus: 'APPROVED',
+          profileSettings: { path: ['seo', 'slug'], equals: identifier },
         },
         include: {
           category: { select: { name: true, id: true } },
@@ -199,11 +274,15 @@ export class DiscoveryService {
             },
             orderBy: { createdAt: 'desc' },
           },
+          bookings: {
+            where: {
+              status: { in: ['CONFIRMED', 'COMPLETED'] },
+              date: { gte: new Date(new Date().toISOString().slice(0, 10)) },
+            },
+            select: { date: true },
+          },
         },
       });
-      business = allActive.find(
-        (b: any) => b.profileSettings?.seo?.slug === identifier,
-      );
     }
 
     if (!business) return null;
@@ -216,13 +295,32 @@ export class DiscoveryService {
       business.reviews.length > 0
         ? (totalRatings / business.reviews.length).toFixed(1)
         : 0;
-    const startingPriceObj = business.packages.length > 0 ? business.packages[0].price : 0;
-    const startingPrice = typeof startingPriceObj === 'object' && startingPriceObj !== null 
-      ? Number(startingPriceObj.toString()) 
-      : Number(startingPriceObj);
+    const startingPriceObj =
+      business.packages.length > 0 ? business.packages[0].price : 0;
+    const startingPrice =
+      typeof startingPriceObj === 'object' && startingPriceObj !== null
+        ? Number(startingPriceObj.toString())
+        : Number(startingPriceObj);
 
+    const { bookings, ...publicBusiness } = business;
+    const capacity = Number(business.profileSettings?.maxBookingsPerDay) || 1;
+    const counts = new Map<string, number>();
+    for (const item of bookings || []) {
+      const key = item.date.toISOString().slice(0, 10);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
     return {
-      ...business,
+      ...publicBusiness,
+      unavailableDates: [
+        ...new Set([
+          ...(Array.isArray(business.profileSettings?.blockedDates)
+            ? business.profileSettings.blockedDates
+            : []),
+          ...[...counts]
+            .filter(([, count]) => count >= capacity)
+            .map(([key]) => key),
+        ]),
+      ],
       rating: Number(avgRating),
       reviewCount: business.reviews.length,
       startingPrice,

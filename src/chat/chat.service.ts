@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -13,8 +14,26 @@ export class ChatService {
     private emailService: EmailService,
   ) {}
 
+  async assertParticipant(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { customerId: true, business: { select: { vendorId: true } } },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (
+      conversation.customerId !== userId &&
+      conversation.business.vendorId !== userId
+    )
+      throw new UnauthorizedException('You do not belong to this conversation');
+    return conversation;
+  }
+
   // Fetch all conversations for a user
-  async getUserConversations(userId: string, roleName: string, asVendor: boolean = false) {
+  async getUserConversations(
+    userId: string,
+    roleName: string,
+    asVendor: boolean = false,
+  ) {
     if (roleName === 'VENDOR' && asVendor) {
       // Find businesses owned by the vendor
       const business = await this.prisma.business.findFirst({
@@ -102,20 +121,7 @@ export class ChatService {
 
   // Fetch messages for a conversation
   async getMessages(conversationId: string, userId: string, roleName: string) {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-      include: { business: true },
-    });
-
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    // Security check
-    if (roleName === 'CUSTOMER' && conversation.customerId !== userId) {
-      throw new UnauthorizedException();
-    }
-    if (roleName === 'VENDOR' && conversation.business.vendorId !== userId) {
-      throw new UnauthorizedException();
-    }
+    await this.assertParticipant(conversationId, userId);
 
     return this.prisma.message.findMany({
       where: { conversationId },
@@ -125,11 +131,14 @@ export class ChatService {
 
   // Save a new message
   async saveMessage(conversationId: string, senderId: string, content: string) {
+    await this.assertParticipant(conversationId, senderId);
+    if (typeof content !== 'string' || !content.trim() || content.length > 5000)
+      throw new BadRequestException('Messages must contain 1–5000 characters');
     const message = await this.prisma.message.create({
       data: {
         conversationId,
         senderId,
-        content,
+        content: content.trim(),
       },
     });
 
@@ -166,6 +175,7 @@ export class ChatService {
 
   // Mark messages as read
   async markAsRead(conversationId: string, userId: string) {
+    await this.assertParticipant(conversationId, userId);
     return this.prisma.message.updateMany({
       where: {
         conversationId,
