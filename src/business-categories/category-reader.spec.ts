@@ -24,8 +24,15 @@ describe('category reads during the hierarchy rollout', () => {
   it('does not hide database connection or unrelated column failures', async () => {
     findMany.mockRejectedValueOnce({ code: 'P1001' });
     await expect(readCategories(prisma)).rejects.toMatchObject({ code: 'P1001' });
-    findMany.mockRejectedValueOnce({ code: 'P2022', meta: { column: 'BusinessCategory.name' } });
+    findMany.mockRejectedValueOnce({ code: 'P2022', meta: { column: 'BusinessCategory.name' } }).mockRejectedValueOnce({ code: 'P2022', meta: { column: 'BusinessCategory.name' } });
     await expect(readCategories(prisma)).rejects.toMatchObject({ code: 'P2022' });
+  });
+  it('recovers when Prisma cannot identify the missing column in its error metadata', async () => {
+    findMany.mockRejectedValueOnce({ code: 'P2022', meta: { column: '(not available)' } }).mockResolvedValueOnce([legacy]);
+    const result = await readCategories(prisma);
+    expect(result.hierarchyAvailable).toBe(false);
+    expect(result.rows[0].id).toBe('cars');
+    expect(findMany.mock.calls[1][0].select).not.toHaveProperty('parentId');
   });
   it('keeps homepage category searches usable with the old catalog', async () => {
     findMany.mockRejectedValueOnce(missingParent).mockResolvedValueOnce([legacy]);

@@ -8,7 +8,9 @@ const select = {
 } as const;
 
 // Rolling deployments may run the new client before parentId is added to Neon.
-// Only recover from this specific missing column; connection failures still surface.
+// Some Prisma engines report an unavailable column name. A successful retry with
+// the same fields except parentId proves which field is missing. Other missing
+// fields or connection failures still surface from the retry.
 export async function readCategories(prisma: PrismaService, withCounts = false) {
   const count = withCounts
     ? { _count: { select: { businesses: { where: { status: 'ACTIVE' as const } } } } }
@@ -21,9 +23,9 @@ export async function readCategories(prisma: PrismaService, withCounts = false) 
     return { rows, hierarchyAvailable: true };
   } catch (error) {
     const details = error as { code?: string; meta?: { column?: string }; message?: string };
-    if (details.code !== 'P2022' || !`${details.meta?.column || ''} ${details.message || ''}`.includes('parentId')) throw error;
-    logger.warn('BusinessCategory.parentId is missing. Serving existing categories; apply the category hierarchy migration.');
+    if (details.code !== 'P2022') throw error;
     const rows = await prisma.businessCategory.findMany({ orderBy, select: { ...select, ...count } });
+    logger.warn('BusinessCategory.parentId is missing. Serving existing categories; apply the category hierarchy migration.');
     return { rows: rows.map((row) => ({ ...row, parentId: null })), hierarchyAvailable: false };
   }
 }
