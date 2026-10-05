@@ -28,6 +28,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  broadcastMessage(message: { conversationId: string }) {
+    this.server
+      ?.to(`conversation_${message.conversationId}`)
+      .emit('receive_message', message);
+  }
+
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
