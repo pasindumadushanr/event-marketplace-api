@@ -18,7 +18,24 @@ export class VendorBusinessService {
   async getMyBusiness(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
-      include: { category: true },
+      // Only display fields are needed here, not the category hierarchy column.
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            icon: true,
+            coverImage: true,
+            sortOrder: true,
+            isFeatured: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     if (!business) {
@@ -32,7 +49,8 @@ export class VendorBusinessService {
 
   async submitOnboarding(vendorId: string, data: any) {
     const { rows: categories } = await readCategories(this.prisma);
-    if (!isCategoryActive(categories, data.categoryId)) throw new BadRequestException('Choose an active business category.');
+    if (!isCategoryActive(categories, data.categoryId))
+      throw new BadRequestException('Choose an active business category.');
     const existing = await (this.prisma as any).business.findFirst({
       where: { vendorId },
     });
@@ -118,9 +136,13 @@ export class VendorBusinessService {
     }
 
     // Merge profileSettings if provided
-    if (data.categoryId !== undefined && data.categoryId !== business.categoryId) {
+    if (
+      data.categoryId !== undefined &&
+      data.categoryId !== business.categoryId
+    ) {
       const { rows: categories } = await readCategories(this.prisma);
-      if (!isCategoryActive(categories, data.categoryId)) throw new BadRequestException('Choose an active business category.');
+      if (!isCategoryActive(categories, data.categoryId))
+        throw new BadRequestException('Choose an active business category.');
     }
     if (data.profileSettings) {
       const existingSettings = business.profileSettings || {};
