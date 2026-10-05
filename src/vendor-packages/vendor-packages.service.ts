@@ -1,9 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class VendorPackagesService {
   constructor(private prisma: PrismaService) {}
+
+  private listingPrice(value: unknown) {
+    if (value === undefined || value === null || value === '') return 0;
+    if (!['number', 'string'].includes(typeof value))
+      throw new BadRequestException(
+        'Enter a valid price or leave it blank for price on request.',
+      );
+    const price = Number(value);
+    if (!Number.isFinite(price) || price < 0 || price > 99999999.99)
+      throw new BadRequestException('Enter a valid price of zero or more.');
+    return price;
+  }
 
   async getMyBusinessId(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
@@ -29,7 +45,7 @@ export class VendorPackagesService {
         name: data.name,
         description: data.description,
         image: data.image || null,
-        price: data.price,
+        price: this.listingPrice(data.price),
         features: data.features || [],
         duration: data.duration,
         status: data.status || 'ACTIVE',
@@ -51,8 +67,9 @@ export class VendorPackagesService {
       data: {
         name: data.name,
         description: data.description,
-        image: data.image !== undefined ? (data.image || null) : undefined,
-        price: data.price,
+        image: data.image !== undefined ? data.image || null : undefined,
+        price:
+          data.price === undefined ? undefined : this.listingPrice(data.price),
         features: data.features,
         duration: data.duration,
         status: data.status,

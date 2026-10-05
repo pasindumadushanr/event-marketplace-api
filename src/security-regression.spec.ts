@@ -44,6 +44,18 @@ describe('Booking privacy and availability', () => {
   });
   it('rejects impossible dates', () =>
     expect(() => bookingDay('2027-02-30')).toThrow());
+  it('requires an enquiry instead of a zero-value booking for quote-only listings', async () => {
+    db.package.findUnique.mockResolvedValue({
+      id: 'p',
+      status: 'ACTIVE',
+      businessId: 'b',
+      price: 0,
+    });
+    await expect(
+      service.createBooking('c', { packageId: 'p', date: '2099-01-01' }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(db.booking.create).not.toHaveBeenCalled();
+  });
   it('rejects past dates before querying a package', async () => {
     await expect(
       service.createBooking('c', { date: '2020-01-01' }),

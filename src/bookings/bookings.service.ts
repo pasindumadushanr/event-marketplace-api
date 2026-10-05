@@ -55,6 +55,10 @@ export class BookingsService {
       if (!pkg) throw new NotFoundException('Package not found');
       if (pkg.status !== 'ACTIVE')
         throw new BadRequestException('This service is not available');
+      if (!Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0)
+        throw new BadRequestException(
+          'This listing is priced on request. Contact the vendor for a quote before booking.',
+        );
       await this.assertAvailable(tx, pkg.businessId, day);
 
       return tx.booking.create({
