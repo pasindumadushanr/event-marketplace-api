@@ -25,7 +25,7 @@ export class CustomerAccountService {
   }
 
   async getFavorites(customerId: string) {
-    return (this.prisma as any).favoriteBusiness.findMany({
+    const favorites = await this.prisma.favoriteBusiness.findMany({
       where: { customerId },
       include: {
         business: {
@@ -33,25 +33,63 @@ export class CustomerAccountService {
             id: true,
             name: true,
             coverImage: true,
+            logo: true,
+            city: true,
+            district: true,
+            isVerified: true,
+            status: true,
+            vendorStatus: true,
             category: { select: { name: true } },
+            packages: {
+              where: { status: 'ACTIVE' },
+              select: { name: true, price: true },
+              orderBy: { createdAt: 'asc' },
+            },
+            reviews: { select: { rating: true } },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
+    return favorites.map(({ business, ...favorite }) => {
+      const { packages, reviews, status, vendorStatus, ...publicFields } =
+        business;
+      const available = status === 'ACTIVE' && vendorStatus === 'APPROVED';
+      const prices = packages.map((item) => Number(item.price));
+      return {
+        ...favorite,
+        business: {
+          ...publicFields,
+          available,
+          services: available ? packages.map((item) => item.name) : [],
+          startingPrice: available && prices.length ? Math.min(...prices) : 0,
+          hasQuoteOnlyServices: available && prices.some((price) => price <= 0),
+          rating:
+            available && reviews.length
+              ? Number(
+                  (
+                    reviews.reduce((sum, review) => sum + review.rating, 0) /
+                    reviews.length
+                  ).toFixed(1),
+                )
+              : 0,
+          reviewCount: available ? reviews.length : 0,
+        },
+      };
+    });
   }
 
   async addFavorite(customerId: string, businessId: string) {
-    const business = await (this.prisma as any).business.findUnique({
-      where: { id: businessId },
+    const business = await this.prisma.business.findFirst({
+      where: { id: businessId, status: 'ACTIVE', vendorStatus: 'APPROVED' },
     });
     if (!business) throw new NotFoundException('Business not found');
 
-    return (this.prisma as any).favoriteBusiness
-      .create({
-        data: { customerId, businessId },
-      })
-      .catch(() => null); // ignore if already exists (unique constraint)
+    return this.prisma.favoriteBusiness.upsert({
+      where: { customerId_businessId: { customerId, businessId } },
+      create: { customerId, businessId },
+      update: {},
+    });
   }
 
   async removeFavorite(customerId: string, businessId: string) {

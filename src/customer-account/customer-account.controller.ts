@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { CustomerAccountService } from './customer-account.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -26,12 +27,18 @@ export class CustomerAccountController {
   }
 
   @Post('favorites/:businessId')
-  addFavorite(@Request() req: any, @Param('businessId') businessId: string) {
+  addFavorite(
+    @Request() req: any,
+    @Param('businessId', ParseUUIDPipe) businessId: string,
+  ) {
     return this.service.addFavorite(req.user.id, businessId);
   }
 
   @Delete('favorites/:businessId')
-  removeFavorite(@Request() req: any, @Param('businessId') businessId: string) {
+  removeFavorite(
+    @Request() req: any,
+    @Param('businessId', ParseUUIDPipe) businessId: string,
+  ) {
     return this.service.removeFavorite(req.user.id, businessId);
   }
 }
