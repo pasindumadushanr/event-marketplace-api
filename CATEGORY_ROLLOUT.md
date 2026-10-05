@@ -1,7 +1,7 @@
 # Wedding category hierarchy rollout
 
 This update adds a nullable parentId to BusinessCategory and installs the requested
-12 main categories, their subcategories, and specific services. Do not deploy the
+12 main categories, 28 subcategories, and 62 specific services. Do not deploy the
 new API against a database that has not received the additive schema change.
 
 1. Back up the target database and record existing category/vendor assignments.
@@ -32,3 +32,9 @@ hides its subtree from category selection without deleting vendor listings.
 Rollback: revert application releases first. Keep the nullable parentId column and
 new category rows; do not drop them or undo vendor mappings without using the backup.
 No production database commands are automatically run by application startup.
+
+The updated attire catalog includes Kandyan, Western, Muslim, Hindu/Indian, and
+pre-shoot bridal options, plus Kandyan, Western, Muslim, and Hindu/Indian groom
+options. Renamed attire service rows retain their existing IDs when possible;
+if both the old and new rows exist, assignments move to the canonical row and
+the old row is retained as inactive. Old service search slugs resolve to the new names.

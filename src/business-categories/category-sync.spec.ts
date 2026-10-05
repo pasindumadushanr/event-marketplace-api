@@ -32,11 +32,19 @@ describe('category catalog synchronization', () => {
         parentId: null,
         status: 'ACTIVE',
       },
+      {
+        id: 'old-gowns',
+        slug: 'western-wedding-gowns',
+        name: 'Western Wedding Gowns',
+        parentId: 'old-attire',
+        status: 'ACTIVE',
+      },
     ];
     const businesses = [
       { id: 'car-vendor', categoryId: 'old-cars' },
       { id: 'suit-vendor', categoryId: 'old-attire' },
       { id: 'unclassified-vendor', categoryId: 'other' },
+      { id: 'gown-vendor', categoryId: 'old-gowns' },
     ];
     const tx = {
       businessCategory: {
@@ -75,15 +83,25 @@ describe('category catalog synchronization', () => {
     const prisma = {
       $transaction: async (operation) => operation(tx),
     } as unknown as PrismaClient;
-    expect(await seedCategories(prisma)).toEqual({ roots: 12, categories: 98 });
+    expect(await seedCategories(prisma)).toEqual({
+      roots: 12,
+      categories: 102,
+    });
     expect(businesses).toEqual([
       { id: 'car-vendor', categoryId: 'id-wedding-cars-transport' },
       { id: 'suit-vendor', categoryId: 'id-attire-fashion' },
       { id: 'unclassified-vendor', categoryId: 'other' },
+      { id: 'gown-vendor', categoryId: 'old-gowns' },
     ]);
     expect(nodes.find((node) => node.id === 'old-cars')?.status).toBe(
       'INACTIVE',
     );
+    expect(nodes.find((node) => node.id === 'old-gowns')).toMatchObject({
+      name: 'Western Gowns',
+      slug: 'western-gowns',
+      parentId: 'old-attire',
+      status: 'ACTIVE',
+    });
     businesses.push({ id: 'new-bridal-vendor', categoryId: 'old-attire' });
     const count = nodes.length;
     await seedCategories(prisma);

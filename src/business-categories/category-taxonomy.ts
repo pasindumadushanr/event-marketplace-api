@@ -34,14 +34,21 @@ export const weddingTaxonomy: TaxonomyGroup[] = [
       {
         name: 'Bridal Wear',
         services: [
-          'Bridal Sarees & Osari',
-          'Western Wedding Gowns',
-          'Pre-Shoot & Casual Dresses',
+          'Kandyan Osari & Sarees',
+          'Western Gowns',
+          'Muslim Bridal & Hijabs',
+          'Indian & Hindu Wear',
+          'Pre-Shoot & Casual Outfits',
         ],
       },
       {
         name: 'Groom Attire',
-        services: ['Mul Anduma / Nilame Wear', 'Western Suits & Tuxedos'],
+        services: [
+          'Kandyan Mul Anduma',
+          'Western Suits & Tuxedos',
+          'Muslim Sherwani & Kurtas',
+          'Hindu & Indian Attire',
+        ],
       },
       {
         name: 'Dress Designers & Tailoring',
@@ -238,6 +245,14 @@ export const weddingTaxonomy: TaxonomyGroup[] = [
     ],
   },
 ];
+
+// Preserve existing vendor assignments and resolve bookmarks after service renames.
+export const serviceCategoryAliases: Record<string, string> = {
+  'bridal-sarees-osari': 'kandyan-osari-sarees',
+  'western-wedding-gowns': 'western-gowns',
+  'pre-shoot-casual-dresses': 'pre-shoot-casual-outfits',
+  'mul-anduma-nilame-wear': 'kandyan-mul-anduma',
+};
 
 export const categorySlug = (name: string) =>
   name

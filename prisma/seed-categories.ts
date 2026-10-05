@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Prisma, PrismaClient } from '@prisma/client';
 import {
   legacyCategoryTargets,
+  serviceCategoryAliases,
   taxonomyRows,
 } from '../src/business-categories/category-taxonomy';
 
@@ -49,11 +50,31 @@ export async function seedCategories(prisma: PrismaClient) {
           parentId: ids.get(parentSlug!)!,
           status: 'ACTIVE' as const,
         };
-        const category = await tx.businessCategory.upsert({
-          where: { slug: row.slug },
-          update: data,
-          create: data,
-        });
+        const previous = originals.find(
+          (item) => serviceCategoryAliases[item.slug] === row.slug,
+        );
+        const alreadyExists = originals.some((item) => item.slug === row.slug);
+        const category =
+          previous && !alreadyExists
+            ? await tx.businessCategory.update({
+                where: { id: previous.id },
+                data,
+              })
+            : await tx.businessCategory.upsert({
+                where: { slug: row.slug },
+                update: data,
+                create: data,
+              });
+        if (previous && previous.id !== category.id) {
+          await tx.business.updateMany({
+            where: { categoryId: previous.id },
+            data: { categoryId: category.id },
+          });
+          await tx.businessCategory.update({
+            where: { id: previous.id },
+            data: { status: 'INACTIVE', parentId: data.parentId },
+          });
+        }
         ids.set(row.slug, category.id);
       }
       // Unclassified/custom legacy categories remain stored and assigned; hide only
