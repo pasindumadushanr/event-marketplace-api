@@ -22,6 +22,13 @@ export class BusinessCategoriesController {
     return this.service.findAll();
   }
 
+  @Get('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  findAllForAdmin() {
+    return this.service.findAll(true);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')

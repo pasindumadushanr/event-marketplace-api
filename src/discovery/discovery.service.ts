@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { descendantIds, isCategoryActive } from '../business-categories/category-tree';
+import { legacyCategoryTargets, serviceCategoryAliases } from '../business-categories/category-taxonomy';
 
 @Injectable()
 export class DiscoveryService {
@@ -10,6 +12,7 @@ export class DiscoveryService {
     const {
       q,
       categoryId,
+      categorySlug,
       city,
       minPrice,
       maxPrice,
@@ -41,8 +44,15 @@ export class DiscoveryService {
       ];
     }
 
-    if (categoryId) {
-      where.categoryId = String(categoryId);
+    if (categoryId || categorySlug) {
+      const nodes = await this.prisma.businessCategory.findMany();
+      const requested = categoryId
+        ? nodes.find((node) => node.id === String(categoryId))
+        : nodes.find((node) => node.slug === String(categorySlug));
+      const aliasSlug = requested?.slug || String(categorySlug);
+      const target = requested?.status === 'ACTIVE' ? requested : nodes.find((node) => node.slug === (serviceCategoryAliases[aliasSlug] || legacyCategoryTargets[aliasSlug]));
+      const visible = nodes.filter((node) => isCategoryActive(nodes, node.id));
+      where.categoryId = { in: target && visible.some((node) => node.id === target.id) ? descendantIds(visible, target.id) : [] };
     }
 
     if (city) {
