@@ -85,7 +85,9 @@ model User {
   emailVerified              Boolean    @default(false)
   emailVerificationOtp       String?
   emailVerificationOtpExpiry DateTime?
+  otpPurpose                 String?
   hashedRefreshToken         String?
+  sessionVersion             Int        @default(0)
   createdAt                  DateTime   @default(now())
   updatedAt                  DateTime   @updatedAt
   roleId                     String     @db.Uuid
@@ -101,6 +103,21 @@ model User {
   messagesSent    Message[]      @relation("SentMessages")
   conversationsAsCustomer Conversation[] @relation("CustomerConversations")
   notifications   Notification[]
+}
+
+// Append-only through the application API; deliberately no cascade on actors.
+model AdminActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @db.Uuid
+  actorName  String
+  action     String
+  targetType String
+  targetId   String
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt, id])
+  @@index([actorId, createdAt])
 }
 
 model BusinessCategory {

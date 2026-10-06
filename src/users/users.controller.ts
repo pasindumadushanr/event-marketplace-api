@@ -117,7 +117,6 @@ export class UsersController {
     )
     file: Express.Multer.File,
   ) {
-
     // Upload to Cloudinary
     const url = await this.storageProvider.uploadFile(file, 'avatars');
 
@@ -126,7 +125,8 @@ export class UsersController {
   }
 
   @Get('email/:email')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   findByEmail(@Param('email') email: string) {
     return this.usersService.findByEmail(email);
   }
@@ -138,7 +138,8 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   findById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
@@ -146,7 +147,11 @@ export class UsersController {
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.usersService.updateStatus(id, status);
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @Request() req: any,
+  ) {
+    return this.usersService.updateStatus(id, status, req.user);
   }
 }

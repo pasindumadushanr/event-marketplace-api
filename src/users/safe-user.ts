@@ -1,0 +1,15 @@
+export const safeUserSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  profileImage: true,
+  status: true,
+  emailVerified: true,
+  authProvider: true,
+  createdAt: true,
+  updatedAt: true,
+  roleId: true,
+  role: { select: { id: true, name: true } },
+} as const;

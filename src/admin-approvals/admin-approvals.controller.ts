@@ -6,6 +6,7 @@ import {
   Body,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
 import { AdminApprovalsService } from './admin-approvals.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -32,12 +33,16 @@ export class AdminApprovalsController {
   }
 
   @Patch(':id/approve')
-  approveApplication(@Param('id') id: string) {
-    return this.service.approveApplication(id);
+  approveApplication(@Param('id') id: string, @Request() req: any) {
+    return this.service.approveApplication(id, req.user);
   }
 
   @Patch(':id/reject')
-  rejectApplication(@Param('id') id: string, @Body('reason') reason: string) {
-    return this.service.rejectApplication(id, reason);
+  rejectApplication(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Request() req: any,
+  ) {
+    return this.service.rejectApplication(id, reason, req.user);
   }
 }

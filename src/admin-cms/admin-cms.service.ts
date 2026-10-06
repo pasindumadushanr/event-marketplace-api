@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
 import { currentBrandContent } from './brand-content';
+import { AdminActor, recordActivity } from '../admin-activity/activity';
 
 @Injectable()
 export class AdminCmsService {
@@ -287,12 +288,22 @@ export class AdminCmsService {
     return setting ? currentBrandContent(setting.value) : null;
   }
 
-  async upsertSetting(key: string, value: any) {
-    const setting = await this.prisma.setting.upsert({
-      where: { key },
-      update: { value },
-      create: { key, value },
+  async upsertSetting(key: string, value: any, actor: AdminActor) {
+    return this.prisma.$transaction(async (tx) => {
+      const setting = await tx.setting.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      });
+      await recordActivity(
+        tx,
+        actor,
+        'SETTING_CHANGED',
+        'SETTING',
+        key,
+        `Platform setting ${key} updated (values redacted)`,
+      );
+      return setting.value;
     });
-    return setting.value;
   }
 }

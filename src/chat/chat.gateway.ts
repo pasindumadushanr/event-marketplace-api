@@ -11,6 +11,9 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
+import { UsersService } from '../users/users.service';
+import { assertSession } from '../auth/session';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
@@ -25,18 +28,38 @@ import { WsException } from '@nestjs/websockets';
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(ChatGateway.name);
   @WebSocketServer()
   server: Server;
 
-  broadcastMessage(message: { conversationId: string }) {
-    this.server
-      ?.to(`conversation_${message.conversationId}`)
-      .emit('receive_message', message);
+  async broadcastMessage(message: { conversationId: string }) {
+    if (!this.server) return;
+    const room = `conversation_${message.conversationId}`;
+    // Revoked sockets must not keep passively receiving private room messages.
+    try {
+      const sockets = await this.server.in(room).fetchSockets();
+      await Promise.all(
+        sockets.map(async (socket) => {
+          try {
+            await this.validateSession(socket.data);
+          } catch {
+            socket.disconnect(true);
+          }
+        }),
+      );
+      this.server.to(room).emit('receive_message', message);
+    } catch {
+      // The message is already saved; fail closed without reporting a failed save.
+      this.logger.warn(
+        'Live message delivery unavailable; message retained in inbox',
+      );
+    }
   }
 
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -51,6 +74,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const payload = this.jwtService.verify(token);
       client.data.user = payload;
+      client.data.token = token;
+      await this.validateSession(client.data);
 
       // Join a personal room for direct user-based notifications
       client.join(`user_${payload.sub}`);
@@ -100,9 +125,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     // Broadcast to everyone in the conversation room (including sender to confirm delivery)
-    this.server
-      .to(`conversation_${data.conversationId}`)
-      .emit('receive_message', message);
+    await this.broadcastMessage(message);
 
     // Also we might want to emit a notification event to the specific recipient's personal room
     // For that, we would need to know the recipient's ID, which we could fetch from the conversation
@@ -115,12 +138,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!client.data?.user?.sub)
       throw new WsException('Authentication required');
     try {
+      await this.validateSession(client.data);
       await this.chatService.assertParticipant(
         conversationId,
         client.data.user.sub,
       );
     } catch {
+      client.disconnect?.();
       throw new WsException('Conversation access denied');
     }
+  }
+
+  private async validateSession(data: any) {
+    const payload = this.jwtService.verify(data.token);
+    const user = await this.usersService.findSessionById(payload.sub);
+    assertSession(payload, user);
   }
 }

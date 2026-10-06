@@ -161,7 +161,7 @@ describe('Conversation authorization', () => {
     );
   });
   it('never joins a websocket room for an outsider', async () => {
-    const gateway = new ChatGateway(service, {} as any);
+    const gateway = new ChatGateway(service, {} as any, {} as any);
     const client: any = {
       data: { user: { sub: 'outsider' } },
       join: jest.fn(),

@@ -194,8 +194,12 @@ export class AdminCmsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Post('settings/:key')
-  async upsertSetting(@Param('key') key: string, @Body() data: any) {
-    return this.service.upsertSetting(key, data.value);
+  async upsertSetting(
+    @Param('key') key: string,
+    @Body() data: any,
+    @Request() req: any,
+  ) {
+    return this.service.upsertSetting(key, data.value, req.user);
   }
 
   @Get('public/settings/:key')

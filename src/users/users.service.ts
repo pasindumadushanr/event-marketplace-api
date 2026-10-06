@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { safeUserSelect } from './safe-user';
+import { AdminActor, recordActivity } from '../admin-activity/activity';
 
 @Injectable()
 export class UsersService {
@@ -48,17 +50,37 @@ export class UsersService {
     });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  // Internal authentication queries must never be exposed by controllers.
+  async findAuthByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
       include: { role: true },
     });
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findAuthById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },
       include: { role: true },
+    });
+  }
+
+  findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: safeUserSelect,
+    });
+  }
+  findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: safeUserSelect,
+    });
+  }
+  findSessionById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { ...safeUserSelect, sessionVersion: true },
     });
   }
 
@@ -72,8 +94,8 @@ export class UsersService {
               },
             }
           : undefined,
-      include: {
-        role: true,
+      select: {
+        ...safeUserSelect,
         businesses: { select: { createdAt: true } },
         vendorSubscriptions: {
           orderBy: { endDate: 'desc' },
@@ -84,15 +106,50 @@ export class UsersService {
     });
   }
 
-  async updateStatus(id: string, status: string) {
-    return this.prisma.user.update({
-      where: { id },
-      data: { status: status as any },
+  async updateStatus(id: string, status: string, actor: AdminActor) {
+    if (!['ACTIVE', 'SUSPENDED', 'INACTIVE'].includes(status))
+      throw new BadRequestException('Invalid user status');
+    if (id === actor.id)
+      throw new BadRequestException(
+        'You cannot change your own account status',
+      );
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.user.update({
+        where: { id },
+        data: {
+          status: status as any,
+          sessionVersion: { increment: 1 },
+          hashedRefreshToken: null,
+          otpPurpose: null,
+          emailVerificationOtp: null,
+          emailVerificationOtpExpiry: null,
+        },
+        select: safeUserSelect,
+      });
+      await recordActivity(
+        tx,
+        actor,
+        'USER_STATUS_CHANGED',
+        'USER',
+        id,
+        `Account status changed to ${status}`,
+      );
+      return result;
     });
   }
 
   async updateMe(id: string, data: any) {
-    const allowedFields = ['firstName', 'lastName', 'phone', 'email', 'profileImage'];
+    if (data.password !== undefined)
+      throw new BadRequestException(
+        'Use the password change form with your current password',
+      );
+    const allowedFields = [
+      'firstName',
+      'lastName',
+      'phone',
+      'email',
+      'profileImage',
+    ];
     const updateData: any = {};
 
     for (const field of allowedFields) {
@@ -124,11 +181,6 @@ export class UsersService {
       }
     }
 
-    if (data.password) {
-      const salt = await bcrypt.genSalt(10);
-      updateData.password = await bcrypt.hash(data.password, salt);
-    }
-
     return this.prisma.user.update({
       where: { id },
       data: updateData,
@@ -148,9 +200,15 @@ export class UsersService {
     currentPassword?: string,
     newPassword?: string,
   ) {
-    if (!currentPassword || !newPassword) {
+    if (
+      typeof currentPassword !== 'string' ||
+      !currentPassword ||
+      !newPassword
+    ) {
       throw new BadRequestException('Current and new password are required');
     }
+    if (typeof newPassword !== 'string' || newPassword.length < 6)
+      throw new BadRequestException('Password must be at least 6 characters');
 
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user || !user.password) {
@@ -167,7 +225,14 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        sessionVersion: { increment: 1 },
+        hashedRefreshToken: null,
+        otpPurpose: null,
+        emailVerificationOtp: null,
+        emailVerificationOtpExpiry: null,
+      },
     });
 
     return { message: 'Password updated successfully' };
@@ -176,7 +241,13 @@ export class UsersService {
   async logoutAllDevices(id: string) {
     await this.prisma.user.update({
       where: { id },
-      data: { hashedRefreshToken: null },
+      data: {
+        hashedRefreshToken: null,
+        sessionVersion: { increment: 1 },
+        otpPurpose: null,
+        emailVerificationOtp: null,
+        emailVerificationOtpExpiry: null,
+      },
     });
     return { message: 'Logged out of all devices successfully' };
   }
@@ -196,6 +267,25 @@ export class UsersService {
       where: { id },
       data,
     });
+  }
+
+  async consumeOtp(id: string, purpose: string, otp: string) {
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id,
+        status: 'ACTIVE',
+        otpPurpose: purpose,
+        emailVerificationOtp: otp,
+        emailVerificationOtpExpiry: { gt: new Date() },
+      },
+      data: {
+        otpPurpose: null,
+        emailVerificationOtp: null,
+        emailVerificationOtpExpiry: null,
+      },
+    });
+    if (result.count !== 1)
+      throw new BadRequestException('Code expired or already used');
   }
 
   async deleteAccount(userId: string) {

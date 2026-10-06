@@ -26,7 +26,7 @@ export class ChatController {
   @Post('inquiries')
   async createInquiry(@Req() req, @Body() body: CreateInquiryDto) {
     const result = await this.chatService.createInquiry(req.user.id, body);
-    this.gateway.broadcastMessage(result.inquiry);
+    await this.gateway.broadcastMessage(result.inquiry);
     return result;
   }
 
@@ -43,7 +43,7 @@ export class ChatController {
       req.user.id,
       body,
     );
-    this.gateway.broadcastMessage(result);
+    await this.gateway.broadcastMessage(result);
     return result;
   }
 
@@ -58,7 +58,7 @@ export class ChatController {
       req.user.id,
       body.content,
     );
-    this.gateway.broadcastMessage(message);
+    await this.gateway.broadcastMessage(message);
     return message;
   }
 

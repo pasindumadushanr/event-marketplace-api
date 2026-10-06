@@ -10,6 +10,7 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { RolesService } from '../roles/roles.service';
 import { EmailService } from '../email/email.service';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -48,8 +49,8 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.findByEmail(loginDto.email);
-    if (!user) {
+    const user = await this.usersService.findAuthByEmail(loginDto.email);
+    if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -68,11 +69,12 @@ export class AuthService {
     const roleName = (user as any).role.name;
 
     if (roleName === 'ADMIN' || roleName === 'SUPER_ADMIN') {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = randomInt(100000, 1000000).toString();
       const expiry = new Date();
       expiry.setMinutes(expiry.getMinutes() + 15);
 
       await this.usersService.updateUser(user.id, {
+        otpPurpose: 'ADMIN_LOGIN',
         emailVerificationOtp: otp,
         emailVerificationOtpExpiry: expiry,
       });
@@ -96,15 +98,20 @@ export class AuthService {
   }
 
   async verifyAdminLoginOtp(userId: string, otp: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) throw new BadRequestException('User not found');
+    const user = await this.usersService.findAuthById(userId);
+    if (!user || user.status !== 'ACTIVE')
+      throw new BadRequestException('User not found or inactive');
 
     const roleName = (user as any).role.name;
     if (roleName !== 'ADMIN' && roleName !== 'SUPER_ADMIN') {
       throw new BadRequestException('Invalid role for admin login');
     }
 
-    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+    if (
+      user.otpPurpose !== 'ADMIN_LOGIN' ||
+      !user.emailVerificationOtp ||
+      !user.emailVerificationOtpExpiry
+    ) {
       throw new BadRequestException('No OTP requested');
     }
 
@@ -117,10 +124,7 @@ export class AuthService {
     }
 
     // Clear OTP
-    await this.usersService.updateUser(userId, {
-      emailVerificationOtp: null,
-      emailVerificationOtpExpiry: null,
-    });
+    await this.usersService.consumeOtp(userId, 'ADMIN_LOGIN', otp);
 
     return this.generateTokens(
       user.id,
@@ -138,10 +142,22 @@ export class AuthService {
     firstName: string,
     lastName: string,
   ) {
-    const payload = { sub: userId, email, role: roleName };
-    const accessToken = this.jwtService.sign(payload);
+    const account = await this.usersService.findSessionById(userId);
+    if (!account || account.status !== 'ACTIVE')
+      throw new UnauthorizedException('Account is not active');
+    const payload = {
+      sub: userId,
+      email,
+      role: account.role.name,
+      sv: account.sessionVersion,
+    };
 
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwtService.sign({ ...payload, type: 'access' });
+
+    const refreshToken = this.jwtService.sign(
+      { ...payload, type: 'refresh' },
+      { expiresIn: '7d' },
+    );
 
     const salt = await bcrypt.genSalt(10);
     const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
@@ -162,12 +178,12 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    await this.usersService.updateRefreshToken(userId, null);
+    await this.usersService.logoutAllDevices(userId);
     return { message: 'Logged out successfully' };
   }
 
   async validateOAuthLogin(profile: any) {
-    let user = await this.usersService.findByEmail(profile.email);
+    let user = await this.usersService.findAuthByEmail(profile.email);
 
     if (!user) {
       const customerRole = await this.rolesService.findByName('CUSTOMER');
@@ -185,6 +201,12 @@ export class AuthService {
         emailVerified: true,
         role: { connect: { id: customerRole.id } },
       });
+    } else if (['ADMIN', 'SUPER_ADMIN'].includes((user as any).role?.name)) {
+      throw new UnauthorizedException(
+        'Administrators must use the admin login with email verification',
+      );
+    } else if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Account is not active');
     } else if (!user.googleId || !user.emailVerified) {
       // Link Google account and mark email as verified since Google verified it
       user = await this.usersService.updateUser(user.id, {
@@ -198,19 +220,20 @@ export class AuthService {
   }
 
   async sendVerificationOtp(userId: string) {
-    const user = await this.usersService.findById(userId);
+    const user = await this.usersService.findAuthById(userId);
     if (!user) throw new BadRequestException('User not found');
     if (user.emailVerified)
       throw new BadRequestException('Email already verified');
 
     // Generate 6 digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 1000000).toString();
 
     // Set expiry to 15 mins from now
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 15);
 
     await this.usersService.updateUser(userId, {
+      otpPurpose: 'EMAIL_VERIFY',
       emailVerificationOtp: otp,
       emailVerificationOtpExpiry: expiry,
     });
@@ -222,10 +245,14 @@ export class AuthService {
   }
 
   async verifyEmailOtp(userId: string, otp: string) {
-    const user = await this.usersService.findById(userId);
+    const user = await this.usersService.findAuthById(userId);
     if (!user) throw new BadRequestException('User not found');
 
-    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+    if (
+      user.otpPurpose !== 'EMAIL_VERIFY' ||
+      !user.emailVerificationOtp ||
+      !user.emailVerificationOtpExpiry
+    ) {
       throw new BadRequestException('No OTP requested');
     }
 
@@ -239,6 +266,7 @@ export class AuthService {
 
     await this.usersService.updateUser(userId, {
       emailVerified: true,
+      otpPurpose: null,
       emailVerificationOtp: null,
       emailVerificationOtpExpiry: null,
     });
@@ -251,41 +279,64 @@ export class AuthService {
       throw new BadRequestException('Email is required');
     }
 
-    const user = await this.usersService.findByEmail(email.toLowerCase().trim());
+    const user = await this.usersService.findAuthByEmail(
+      email.toLowerCase().trim(),
+    );
     if (!user) {
-      return { message: 'If an account exists with this email, a reset code has been sent.' };
+      return {
+        message:
+          'If an account exists with this email, a reset code has been sent.',
+      };
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 1000000).toString();
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 15);
 
     await this.usersService.updateUser(user.id, {
+      otpPurpose: 'RESET_PASSWORD',
       emailVerificationOtp: otp,
       emailVerificationOtpExpiry: expiry,
     });
 
-    await this.emailService.sendPasswordResetEmail(user.email, user.firstName, otp);
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
 
-    return { message: 'If an account exists with this email, a reset code has been sent.' };
+    return {
+      message:
+        'If an account exists with this email, a reset code has been sent.',
+    };
   }
 
   async resetPassword(email: string, otp: string, newPassword: string) {
     if (!email || !otp || !newPassword) {
-      throw new BadRequestException('Email, OTP, and new password are required');
+      throw new BadRequestException(
+        'Email, OTP, and new password are required',
+      );
     }
 
-    const user = await this.usersService.findByEmail(email.toLowerCase().trim());
+    const user = await this.usersService.findAuthByEmail(
+      email.toLowerCase().trim(),
+    );
     if (!user) {
       throw new BadRequestException('Invalid email or reset code');
     }
 
-    if (!user.emailVerificationOtp || !user.emailVerificationOtpExpiry) {
+    if (
+      user.otpPurpose !== 'RESET_PASSWORD' ||
+      !user.emailVerificationOtp ||
+      !user.emailVerificationOtpExpiry
+    ) {
       throw new BadRequestException('No password reset requested');
     }
 
     if (new Date() > user.emailVerificationOtpExpiry) {
-      throw new BadRequestException('Reset code has expired. Please request a new one.');
+      throw new BadRequestException(
+        'Reset code has expired. Please request a new one.',
+      );
     }
 
     if (user.emailVerificationOtp !== otp.trim()) {
@@ -301,6 +352,9 @@ export class AuthService {
 
     await this.usersService.updateUser(user.id, {
       password: hashedPassword,
+      otpPurpose: null,
+      sessionVersion: { increment: 1 },
+      hashedRefreshToken: null,
       emailVerificationOtp: null,
       emailVerificationOtpExpiry: null,
     });

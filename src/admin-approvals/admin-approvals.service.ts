@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { INQUIRY_PREFIX, readInquiryRecord } from '../chat/inquiry-record';
+import { AdminActor, recordActivity } from '../admin-activity/activity';
 
 @Injectable()
 export class AdminApprovalsService {
@@ -169,16 +170,27 @@ export class AdminApprovalsService {
     });
   }
 
-  async approveApplication(id: string) {
+  async approveApplication(id: string, actor: AdminActor) {
     const business = await this.prisma.business.findUnique({
       where: { id },
       include: { vendor: true },
     });
     if (!business) throw new NotFoundException('Application not found');
 
-    const updated = await this.prisma.business.update({
-      where: { id },
-      data: { vendorStatus: 'APPROVED', rejectionReason: null },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.business.update({
+        where: { id },
+        data: { vendorStatus: 'APPROVED', rejectionReason: null },
+      });
+      await recordActivity(
+        tx,
+        actor,
+        'APPLICATION_APPROVED',
+        'BUSINESS',
+        id,
+        'Vendor application approved',
+      );
+      return result;
     });
 
     // Send email notification to vendor asynchronously
@@ -194,13 +206,28 @@ export class AdminApprovalsService {
     return updated;
   }
 
-  async rejectApplication(id: string, reason: string) {
+  async rejectApplication(id: string, reason: string, actor: AdminActor) {
+    if (typeof reason !== 'string' || !reason.trim() || reason.length > 2000)
+      throw new BadRequestException(
+        'Provide a rejection reason (up to 2000 characters)',
+      );
     const business = await this.prisma.business.findUnique({ where: { id } });
     if (!business) throw new NotFoundException('Application not found');
 
-    return this.prisma.business.update({
-      where: { id },
-      data: { vendorStatus: 'REJECTED', rejectionReason: reason },
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.business.update({
+        where: { id },
+        data: { vendorStatus: 'REJECTED', rejectionReason: reason.trim() },
+      });
+      await recordActivity(
+        tx,
+        actor,
+        'APPLICATION_REJECTED',
+        'BUSINESS',
+        id,
+        'Vendor application rejected with a reason',
+      );
+      return result;
     });
   }
 }

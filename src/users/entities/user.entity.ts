@@ -23,8 +23,14 @@ export class UserEntity implements User {
   profileImage: string | null;
   status: any;
   emailVerified: boolean;
+  @Exclude()
+  sessionVersion: number;
+  @Exclude()
   emailVerificationOtp: string | null;
+  @Exclude()
   emailVerificationOtpExpiry: Date | null;
+  @Exclude()
+  otpPurpose: string | null;
 
   @Exclude()
   hashedRefreshToken: string | null;
