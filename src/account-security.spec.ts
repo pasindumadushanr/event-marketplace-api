@@ -32,8 +32,19 @@ function database() {
       updateMany: jest.fn(),
     },
     business: {
-      findUnique: jest.fn().mockResolvedValue({ id: 'business' }),
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({
+          id: 'business',
+          vendorStatus: 'UNDER_REVIEW',
+          vendor: { status: 'ACTIVE' },
+        }),
       update: jest.fn().mockResolvedValue({ id: 'business' }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+    applicationReviewEvent: {
+      create: jest.fn().mockResolvedValue({ id: 'review' }),
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     setting: {
       upsert: jest

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -153,6 +154,7 @@ export class VendorBusinessService {
           vendorId,
           vendorStatus: 'UNDER_REVIEW',
           status: 'INACTIVE',
+          submittedAt: new Date(),
         },
       });
     } catch (error: any) {
@@ -162,6 +164,15 @@ export class VendorBusinessService {
       );
     }
 
+    await this.notifyApplication(vendorId, business, categories);
+    return business;
+  }
+
+  private async notifyApplication(
+    vendorId: string,
+    business: any,
+    categories: any[],
+  ) {
     // Notify only after the application is saved. Email failures must never
     // report a saved application as failed or encourage duplicate submissions.
     try {
@@ -196,7 +207,67 @@ export class VendorBusinessService {
         `Application ${business.id} saved, but admin notification failed. Review it in Vendor Approvals.`,
       );
     }
-    return business;
+  }
+
+  async resubmitOnboarding(vendorId: string, data: any) {
+    data = this.editableData(data);
+    const business = await this.prisma.business.findFirst({
+      where: { vendorId },
+    });
+    if (!business) throw new NotFoundException('Application not found');
+    if (!['NEEDS_INFO', 'REJECTED'].includes(business.vendorStatus))
+      throw new ConflictException(
+        'Only applications needing changes can be resubmitted',
+      );
+    const { rows: categories } = await readCategories(this.prisma);
+    if (!isCategoryActive(categories, data.categoryId || business.categoryId))
+      throw new BadRequestException('Choose an active business category');
+    const updated = { ...business, ...data };
+    if (
+      ![updated.name, updated.phone, updated.email].every(
+        (value) => typeof value === 'string' && value.trim(),
+      )
+    )
+      throw new BadRequestException(
+        'Business name, email and phone are required',
+      );
+    const vendor = await this.prisma.user.findUnique({
+      where: { id: vendorId },
+      select: { firstName: true, lastName: true },
+    });
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.business.updateMany({
+        where: {
+          id: business.id,
+          vendorId,
+          vendorStatus: business.vendorStatus,
+        },
+        data: {
+          ...data,
+          vendorStatus: 'UNDER_REVIEW',
+          status: 'INACTIVE',
+          rejectionReason: null,
+          informationRequest: null,
+          submittedAt: new Date(),
+        },
+      });
+      if (result.count !== 1)
+        throw new ConflictException(
+          'Your application changed. Reload before resubmitting',
+        );
+      await tx.applicationReviewEvent.create({
+        data: {
+          businessId: business.id,
+          actorId: vendorId,
+          actorName:
+            [vendor?.firstName, vendor?.lastName].filter(Boolean).join(' ') ||
+            'Vendor',
+          action: 'RESUBMITTED',
+        },
+      });
+    });
+    await this.notifyApplication(vendorId, updated, categories);
+    return { message: 'Application resubmitted for review' };
   }
 
   async getOnboardingStatus(vendorId: string) {
@@ -207,7 +278,12 @@ export class VendorBusinessService {
 
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
-      select: { vendorStatus: true, rejectionReason: true },
+      select: {
+        vendorStatus: true,
+        rejectionReason: true,
+        informationRequest: true,
+        submittedAt: true,
+      },
     });
 
     if (!business) {

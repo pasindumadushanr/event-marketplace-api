@@ -56,6 +56,8 @@ describe('VendorBusinessService', () => {
     expect(findFirst.mock.calls[0][0].select).toEqual({
       vendorStatus: true,
       rejectionReason: true,
+      informationRequest: true,
+      submittedAt: true,
     });
   });
 });

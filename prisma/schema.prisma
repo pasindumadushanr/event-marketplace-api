@@ -27,6 +27,7 @@ enum EntityStatus {
 enum VendorStatus {
   PENDING
   UNDER_REVIEW
+  NEEDS_INFO
   APPROVED
   REJECTED
   SUSPENDED
@@ -174,6 +175,8 @@ model Business {
   status             EntityStatus   @default(ACTIVE)
   vendorStatus       VendorStatus   @default(PENDING)
   rejectionReason    String?
+  informationRequest String?
+  submittedAt        DateTime       @default(now())
   profileSettings    Json?
   
   // Relations
@@ -194,6 +197,24 @@ model Business {
   
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+
+  @@index([vendorStatus, submittedAt, id])
+}
+
+// Private review details are queried only through administrator routes.
+// No cascade: retain decision history if an account or business is removed.
+model ApplicationReviewEvent {
+  id                    String    @id @default(uuid()) @db.Uuid
+  businessId            String    @db.Uuid
+  actorId               String    @db.Uuid
+  actorName             String
+  action                String
+  message               String?
+  notificationStatus    String    @default("NOT_REQUIRED")
+  notificationAttemptAt DateTime?
+  createdAt             DateTime  @default(now())
+
+  @@index([businessId, createdAt, id])
 }
 
 model Gallery {

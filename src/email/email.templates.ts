@@ -15,6 +15,19 @@ export type VendorApplicationDetails = {
 };
 
 export const EmailTemplates = {
+  getVendorReviewTemplate: (
+    name: string,
+    business: string,
+    action: string,
+    message: string,
+    dashboardUrl: string,
+  ) => `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
+      <h2>Nakathata.lk application update</h2><p>Hi ${escapeHtml(name)},</p><p>Your application for <strong>${escapeHtml(business)}</strong> ${action === 'APPROVED' ? 'has been approved.' : action === 'REJECTED' ? 'was not approved at this time.' : 'needs more information before we can finish the review.'}</p>
+      ${message ? `<p style="white-space:pre-wrap;background:#f8fafc;padding:16px">${escapeHtml(message)}</p>` : ''}
+      <p>${action === 'APPROVED' ? 'Approval does not publish your business automatically. Complete your profile, preview it, then publish from your dashboard.' : 'Open your dashboard to update the application, attach any requested documents, and resubmit for review.'}</p>
+      <a href="${escapeHtml(dashboardUrl)}">Open vendor dashboard</a><p>Nakathata.lk review team</p>
+    </div>`,
   getContactConfirmationTemplate: (name: string) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">Thank you for contacting us, ${name}!</h2>

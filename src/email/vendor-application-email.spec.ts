@@ -84,6 +84,7 @@ describe('Vendor application admin email', () => {
         vendorId: 'vendor-1',
         vendorStatus: 'UNDER_REVIEW',
         status: 'INACTIVE',
+        submittedAt: expect.any(Date),
       },
     });
   });

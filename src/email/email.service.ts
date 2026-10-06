@@ -56,6 +56,37 @@ export class EmailService {
     );
   }
 
+  async sendVendorReviewNotification(
+    email: string,
+    name: string,
+    business: string,
+    action: string,
+    message: string,
+  ) {
+    let siteUrl = 'https://www.luxeevents.fun';
+    try {
+      const configured = new URL(process.env.FRONTEND_URL || siteUrl);
+      if (['https:', 'http:'].includes(configured.protocol))
+        siteUrl = configured.origin;
+    } catch {}
+    const titles = {
+      APPROVED: 'Your vendor application is approved',
+      REJECTED: 'Update on your vendor application',
+      INFORMATION_REQUESTED: 'More information needed for your application',
+    };
+    return this.sendMail(
+      email,
+      `${titles[action] || 'Vendor application update'} - Nakathata.lk`,
+      EmailTemplates.getVendorReviewTemplate(
+        name,
+        business,
+        action,
+        message,
+        `${siteUrl}/vendor`,
+      ),
+    );
+  }
+
   async sendOtpEmail(email: string, name: string, otp: string) {
     const html = EmailTemplates.getOtpVerificationTemplate(name, otp);
     return this.sendMail(email, 'Your Verification Code - Nakathata.lk', html);

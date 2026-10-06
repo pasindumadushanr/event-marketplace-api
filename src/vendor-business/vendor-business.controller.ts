@@ -63,6 +63,11 @@ export class VendorBusinessController {
     return this.service.getOnboardingStatus(req.user.id);
   }
 
+  @Post('onboarding/resubmit')
+  resubmitOnboarding(@Request() req: any, @Body() data: any) {
+    return this.service.resubmitOnboarding(req.user.id, data);
+  }
+
   @Patch()
   updateMyBusiness(@Request() req: any, @Body() data: any) {
     return this.service.updateMyBusiness(req.user.id, data);
