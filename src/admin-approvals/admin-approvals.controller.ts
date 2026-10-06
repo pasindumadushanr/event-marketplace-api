@@ -23,6 +23,14 @@ export class AdminApprovalsController {
     return this.service.getApplications(status);
   }
 
+  @Get('launch-overview')
+  getLaunchOverview(
+    @Query('district') district?: string,
+    @Query('page') page?: string,
+  ) {
+    return this.service.getLaunchOverview(district, page);
+  }
+
   @Patch(':id/approve')
   approveApplication(@Param('id') id: string) {
     return this.service.approveApplication(id);
