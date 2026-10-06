@@ -1,3 +1,19 @@
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
+        character
+      ]!,
+  );
+export type VendorApplicationDetails = {
+  applicationId: string;
+  category: string;
+  location: string;
+  email: string;
+  phone: string;
+};
+
 export const EmailTemplates = {
   getContactConfirmationTemplate: (name: string) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -53,16 +69,34 @@ export const EmailTemplates = {
   getNewVendorApplicationNotificationTemplate: (
     vendorName: string,
     businessName: string,
+    details?: VendorApplicationDetails,
+    reviewUrl = 'https://www.luxeevents.fun/admin/vendors/approvals',
   ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">New Vendor Application</h2>
       <p style="color: #475569; line-height: 1.6;">A new vendor has submitted their business application and is waiting for your review.</p>
       <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <p style="color: #475569; margin: 5px 0;"><strong>Vendor Name:</strong> ${vendorName}</p>
-        <p style="color: #475569; margin: 5px 0;"><strong>Business Name:</strong> ${businessName}</p>
+        <p style="color: #475569; margin: 5px 0;"><strong>Vendor Name:</strong> ${escapeHtml(vendorName)}</p>
+        <p style="color: #475569; margin: 5px 0;"><strong>Business Name:</strong> ${escapeHtml(businessName)}</p>
+        ${
+          details
+            ? Object.entries({
+                'Application ID': details.applicationId,
+                Category: details.category,
+                Location: details.location,
+                'Business email': details.email,
+                Phone: details.phone,
+              })
+                .map(
+                  ([label, value]) =>
+                    `<p style="color: #475569; margin: 5px 0;"><strong>${label}:</strong> ${escapeHtml(value)}</p>`,
+                )
+                .join('')
+            : ''
+        }
       </div>
       <div style="margin-top: 30px;">
-        <a href="https://event-marketplace-web-woad.vercel.app/admin/vendors" style="background-color: #0f172a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Review Application</a>
+        <a href="${escapeHtml(reviewUrl)}" style="background-color: #0f172a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Review Applications</a>
       </div>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
       <p style="color: #94a3b8; font-size: 12px;">Automated Admin Notification</p>

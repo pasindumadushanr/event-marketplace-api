@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { IEmailProvider } from './email.interface';
-import { EmailTemplates } from './email.templates';
+import { EmailTemplates, VendorApplicationDetails } from './email.templates';
 
 @Injectable()
 export class EmailService {
@@ -26,7 +26,11 @@ export class EmailService {
 
   async sendContactConfirmation(email: string, name: string) {
     const html = EmailTemplates.getContactConfirmationTemplate(name);
-    return this.sendMail(email, 'We received your inquiry - Nakathata.lk', html);
+    return this.sendMail(
+      email,
+      'We received your inquiry - Nakathata.lk',
+      html,
+    );
   }
 
   async sendAdminContactNotification(
@@ -66,12 +70,27 @@ export class EmailService {
     adminEmail: string,
     vendorName: string,
     businessName: string,
+    details?: VendorApplicationDetails,
   ) {
+    let siteUrl = 'https://www.luxeevents.fun';
+    try {
+      const configured = new URL(process.env.FRONTEND_URL || siteUrl);
+      if (['https:', 'http:'].includes(configured.protocol))
+        siteUrl = configured.origin;
+    } catch {
+      /* Use the current public site when configuration is invalid. */
+    }
     const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(
       vendorName,
       businessName,
+      details,
+      `${siteUrl}/admin/vendors/approvals`,
     );
-    return this.sendMail(adminEmail, 'New Vendor Application Submitted', html);
+    return this.sendMail(
+      adminEmail,
+      'New Vendor Application Submitted - Nakathata.lk',
+      html,
+    );
   }
 
   async sendNewMessageNotification(

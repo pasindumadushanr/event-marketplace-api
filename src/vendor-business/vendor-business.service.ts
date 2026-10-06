@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -12,6 +13,7 @@ import { mergeProfileSettings } from './profile-settings';
 
 @Injectable()
 export class VendorBusinessService {
+  private readonly logger = new Logger(VendorBusinessService.name);
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
@@ -143,8 +145,9 @@ export class VendorBusinessService {
       );
     }
 
+    let business: any;
     try {
-      const business = await (this.prisma as any).business.create({
+      business = await (this.prisma as any).business.create({
         data: {
           ...data,
           vendorId,
@@ -152,37 +155,48 @@ export class VendorBusinessService {
           status: 'INACTIVE',
         },
       });
-
-      // Send email notification to admin asynchronously
-      const vendorUser = await (this.prisma as any).user.findUnique({
-        where: { id: vendorId },
-      });
-      const adminRole = await (this.prisma as any).role.findFirst({
-        where: { name: 'SUPER_ADMIN' },
-      });
-
-      if (adminRole && vendorUser) {
-        const adminUser = await (this.prisma as any).user.findFirst({
-          where: { roleId: adminRole.id },
-        });
-        if (adminUser && adminUser.email) {
-          this.emailService
-            .sendNewVendorApplicationNotification(
-              adminUser.email,
-              `${vendorUser.firstName} ${vendorUser.lastName}`,
-              business.name || 'Unknown Business',
-            )
-            .catch(console.error);
-        }
-      }
-
-      return business;
     } catch (error: any) {
-      console.error('Error in submitOnboarding:', error);
+      this.logger.error('Failed to save vendor application');
       throw new BadRequestException(
         'Failed to create business: ' + error.message,
       );
     }
+
+    // Notify only after the application is saved. Email failures must never
+    // report a saved application as failed or encourage duplicate submissions.
+    try {
+      const vendorUser = await (this.prisma as any).user.findUnique({
+        where: { id: vendorId },
+        select: { firstName: true, lastName: true },
+      });
+      const sent = await this.emailService.sendNewVendorApplicationNotification(
+        'admineventmarketplace@gmail.com',
+        [vendorUser?.firstName, vendorUser?.lastName]
+          .filter(Boolean)
+          .join(' ') || 'Vendor',
+        business.name,
+        {
+          applicationId: business.id,
+          category:
+            categories.find((category) => category.id === business.categoryId)
+              ?.name || 'Not provided',
+          location:
+            [business.city, business.district].filter(Boolean).join(', ') ||
+            'Not provided',
+          email: business.email || 'Not provided',
+          phone: business.phone || 'Not provided',
+        },
+      );
+      if (!sent)
+        this.logger.warn(
+          `Application ${business.id} saved, but admin email delivery failed. Review it in Vendor Approvals.`,
+        );
+    } catch (error: any) {
+      this.logger.warn(
+        `Application ${business.id} saved, but admin notification failed. Review it in Vendor Approvals.`,
+      );
+    }
+    return business;
   }
 
   async getOnboardingStatus(vendorId: string) {
