@@ -14,12 +14,15 @@ import { NewsletterDto } from './dto/newsletter.dto';
 import { Throttle } from '@nestjs/throttler';
 import { ContactService } from './contact.service';
 import { CreateContactDto } from './dto/create-contact.dto';
+import { RecaptchaAction, RecaptchaGuard } from '../recaptcha/recaptcha.guard';
 
 @Controller('contact')
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 
   @Post()
+  @UseGuards(RecaptchaGuard)
+  @RecaptchaAction('contact')
   submitContactForm(@Body() dto: CreateContactDto) {
     return this.contactService.submitContactForm(dto);
   }

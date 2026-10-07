@@ -17,6 +17,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { RecaptchaAction, RecaptchaGuard } from '../recaptcha/recaptcha.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -24,6 +25,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @UseGuards(RecaptchaGuard)
+  @RecaptchaAction('register')
   @ApiOperation({ summary: 'Register a new user' })
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -74,6 +77,8 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @UseGuards(RecaptchaGuard)
+  @RecaptchaAction('forgot_password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset code' })
   forgotPassword(@Body('email') email: string) {

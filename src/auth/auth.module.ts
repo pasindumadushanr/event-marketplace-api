@@ -8,9 +8,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { RolesModule } from '../roles/roles.module';
 import { EmailModule } from '../email/email.module';
+import { RecaptchaModule } from '../recaptcha/recaptcha.module';
 
 @Module({
   imports: [
+    RecaptchaModule,
     UsersModule,
     RolesModule,
     EmailModule,
