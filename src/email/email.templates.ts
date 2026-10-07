@@ -83,7 +83,7 @@ export const EmailTemplates = {
     vendorName: string,
     businessName: string,
     details?: VendorApplicationDetails,
-    reviewUrl = 'https://www.luxeevents.fun/admin/vendors/approvals',
+    reviewUrl = 'https://nakathata.lk/admin/vendors/approvals',
   ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #0f172a;">New Vendor Application</h2>

@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { IEmailProvider } from './email.interface';
 import { EmailTemplates, VendorApplicationDetails } from './email.templates';
+import { frontendUrl } from '../frontend-url';
 
 @Injectable()
 export class EmailService {
@@ -63,12 +64,7 @@ export class EmailService {
     action: string,
     message: string,
   ) {
-    let siteUrl = 'https://www.luxeevents.fun';
-    try {
-      const configured = new URL(process.env.FRONTEND_URL || siteUrl);
-      if (['https:', 'http:'].includes(configured.protocol))
-        siteUrl = configured.origin;
-    } catch {}
+    const siteUrl = frontendUrl();
     const titles = {
       APPROVED: 'Your vendor application is approved',
       REJECTED: 'Update on your vendor application',
@@ -103,14 +99,7 @@ export class EmailService {
     businessName: string,
     details?: VendorApplicationDetails,
   ) {
-    let siteUrl = 'https://www.luxeevents.fun';
-    try {
-      const configured = new URL(process.env.FRONTEND_URL || siteUrl);
-      if (['https:', 'http:'].includes(configured.protocol))
-        siteUrl = configured.origin;
-    } catch {
-      /* Use the current public site when configuration is invalid. */
-    }
+    const siteUrl = frontendUrl();
     const html = EmailTemplates.getNewVendorApplicationNotificationTemplate(
       vendorName,
       businessName,

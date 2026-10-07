@@ -71,7 +71,7 @@ describe('Vendor application admin email', () => {
       'Jaffna',
       'vendor@example.com',
       '0771234567',
-      'https://www.luxeevents.fun/admin/vendors/approvals',
+      'https://nakathata.lk/admin/vendors/approvals',
     ])
       expect(sent.html).toContain(text);
     expect(db.business.create.mock.invocationCallOrder[0]).toBeLessThan(
@@ -191,7 +191,7 @@ describe('Vendor application admin email', () => {
         'Business',
       );
       expect(provider.sendMail.mock.calls[0][0].html).toContain(
-        'href="https://www.luxeevents.fun/admin/vendors/approvals"',
+        'href="https://nakathata.lk/admin/vendors/approvals"',
       );
     },
   );
