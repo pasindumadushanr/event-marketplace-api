@@ -12,6 +12,7 @@ import {
 } from '../business-categories/category-taxonomy';
 import { readCategories } from '../business-categories/category-reader';
 import { withReviewEvidence } from '../reviews/review-evidence';
+import { coordinates, distanceKm } from './geo';
 
 @Injectable()
 export class DiscoveryService {
@@ -29,7 +30,12 @@ export class DiscoveryService {
     }));
   }
 
-  async search(query: any) {
+  async search(query: any, nearby = false) {
+    const origin = nearby ? coordinates(query) : null;
+    if (nearby && !origin)
+      throw new BadRequestException(
+        'A valid latitude and longitude are required',
+      );
     const {
       q,
       categoryId,
@@ -37,7 +43,7 @@ export class DiscoveryService {
       city,
       minPrice,
       maxPrice,
-      sortBy = 'NEWEST',
+      sortBy = nearby ? 'DISTANCE' : 'NEWEST',
       page = 1,
       limit = 12,
     } = query;
@@ -62,9 +68,18 @@ export class DiscoveryService {
       )
     )
       throw new BadRequestException('Prices must be non-negative numbers');
-    const aggregateSort = ['PRICE_ASC', 'PRICE_DESC', 'RATING_DESC'].includes(
-      sortBy,
-    );
+    if (
+      ![
+        'NEWEST',
+        'PRICE_ASC',
+        'PRICE_DESC',
+        'RATING_DESC',
+        ...(nearby ? ['DISTANCE'] : []),
+      ].includes(sortBy)
+    )
+      throw new BadRequestException('Invalid sort order');
+    const aggregateSort =
+      nearby || ['PRICE_ASC', 'PRICE_DESC', 'RATING_DESC'].includes(sortBy);
 
     // Build the dynamic WHERE clause
     const where: Prisma.BusinessWhereInput = {
@@ -148,7 +163,7 @@ export class DiscoveryService {
     // For MVP, if PRICE_ASC/DESC or RATING_DESC is requested, we will handle it after fetching if needed,
     // or we can just stick to basic sorting. We will fetch packages to compute the starting price anyway.
 
-    const [businesses, total] = await Promise.all([
+    const [businesses, databaseTotal] = await Promise.all([
       (this.prisma as any).business.findMany({
         where,
         include: {
@@ -169,37 +184,62 @@ export class DiscoveryService {
     ]);
 
     // Map the results to include computed fields for the VendorCard
-    const mappedBusinesses = businesses.map((b) => {
-      // Calculate Starting Price
-      const startingPriceObj = b.packages.length > 0 ? b.packages[0].price : 0;
-      const startingPrice =
-        typeof startingPriceObj === 'object' && startingPriceObj !== null
-          ? Number(startingPriceObj.toString())
-          : Number(startingPriceObj);
+    const mappedBusinesses = businesses
+      .map((b) => {
+        const position = coordinates(b.profileSettings?.location);
+        const distance =
+          origin && position ? distanceKm(origin, position) : null;
+        // Calculate Starting Price
+        const startingPriceObj =
+          b.packages.length > 0 ? b.packages[0].price : 0;
+        const startingPrice =
+          typeof startingPriceObj === 'object' && startingPriceObj !== null
+            ? Number(startingPriceObj.toString())
+            : Number(startingPriceObj);
 
-      // Calculate Average Rating
-      const totalRatings = b.reviews.reduce((acc, rev) => acc + rev.rating, 0);
-      const avgRating =
-        b.reviews.length > 0 ? (totalRatings / b.reviews.length).toFixed(1) : 0;
+        // Calculate Average Rating
+        const totalRatings = b.reviews.reduce(
+          (acc, rev) => acc + rev.rating,
+          0,
+        );
+        const avgRating =
+          b.reviews.length > 0
+            ? (totalRatings / b.reviews.length).toFixed(1)
+            : 0;
 
-      return {
-        id: b.id,
-        name: b.name,
-        coverImage: b.coverImage,
-        logo: b.logo,
-        // Legacy flags have no recorded identity/registration evidence.
-        isVerified: false,
-        city: b.city,
-        category: b.category,
-        startingPrice,
-        rating: Number(avgRating),
-        reviewCount: b.reviews.length,
-        createdAt: b.createdAt,
-      };
-    });
+        return {
+          id: b.id,
+          name: b.name,
+          coverImage: b.coverImage,
+          logo: b.logo,
+          // Legacy flags have no recorded identity/registration evidence.
+          isVerified: false,
+          city: b.city,
+          category: b.category,
+          startingPrice,
+          rating: Number(avgRating),
+          reviewCount: b.reviews.length,
+          createdAt: b.createdAt,
+          ...(nearby ? { distanceKm: distance } : {}),
+        };
+      })
+      .filter(
+        (b) =>
+          !nearby ||
+          (b.distanceKm !== null &&
+            b.distanceKm !== undefined &&
+            b.distanceKm <= 50),
+      );
+    const total = nearby ? mappedBusinesses.length : databaseTotal;
 
     // Apply advanced sorting in JS (since it involves computed relation aggregates)
-    if (sortBy === 'PRICE_ASC') {
+    if (sortBy === 'DISTANCE') {
+      mappedBusinesses.sort(
+        (a, b) =>
+          a.distanceKm! - b.distanceKm! ||
+          String(a.id).localeCompare(String(b.id)),
+      );
+    } else if (sortBy === 'PRICE_ASC') {
       mappedBusinesses.sort((a, b) => a.startingPrice - b.startingPrice);
     } else if (sortBy === 'PRICE_DESC') {
       mappedBusinesses.sort((a, b) => b.startingPrice - a.startingPrice);
@@ -216,6 +256,7 @@ export class DiscoveryService {
         page: Number(page),
         limit: Number(limit),
         totalPages: Math.ceil(total / Number(limit)),
+        ...(nearby ? { radiusKm: 50 } : {}),
       },
     };
   }

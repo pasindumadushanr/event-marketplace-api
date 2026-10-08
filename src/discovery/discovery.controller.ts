@@ -1,6 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
+  Header,
   Query,
   Param,
   NotFoundException,
@@ -19,6 +22,13 @@ export class DiscoveryController {
   @Get('search')
   search(@Query() query: any) {
     return this.discoveryService.search(query);
+  }
+
+  // Coordinates stay out of URLs, access-log query strings and shared caches.
+  @Post('nearby')
+  @Header('Cache-Control', 'no-store')
+  nearby(@Body() body: any) {
+    return this.discoveryService.search(body, true);
   }
 
   @Get('packages')

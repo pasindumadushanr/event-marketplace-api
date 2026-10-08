@@ -5,8 +5,9 @@ import { EmailService } from '../email/email.service';
 describe('VendorBusinessService', () => {
   const findFirst = jest.fn();
   const findUnique = jest.fn();
+  const update = jest.fn();
   const prisma = {
-    business: { findFirst },
+    business: { findFirst, update },
     user: { findUnique },
   } as unknown as PrismaService;
   const service = new VendorBusinessService(prisma, {} as EmailService);
@@ -26,6 +27,50 @@ describe('VendorBusinessService', () => {
       return business;
     });
     await expect(service.getMyBusiness('vendor-1')).resolves.toEqual(business);
+  });
+
+  it('rejects invalid business coordinates before touching the database', async () => {
+    await expect(
+      service.updateMyBusiness('vendor-1', {
+        profileSettings: { location: { latitude: 95, longitude: 80 } },
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('saves or clears coordinates without losing other profile settings', async () => {
+    const point = { latitude: 6.9, longitude: 79.8 };
+    findFirst.mockResolvedValue({
+      id: 'b1',
+      profileSettings: { policies: { bookingPolicy: 'Call first' } },
+    });
+    update.mockResolvedValue({ id: 'b1' });
+    await service.updateMyBusiness('vendor-1', {
+      profileSettings: { location: point },
+    });
+    expect(update.mock.calls[0][0]).toMatchObject({
+      where: { id: 'b1' },
+      data: {
+        profileSettings: {
+          location: point,
+          policies: { bookingPolicy: 'Call first' },
+        },
+      },
+    });
+    findFirst.mockResolvedValue({
+      id: 'b1',
+      profileSettings: {
+        location: point,
+        policies: { bookingPolicy: 'Call first' },
+      },
+    });
+    await service.updateMyBusiness('vendor-1', {
+      profileSettings: { location: null },
+    });
+    expect(update.mock.calls[1][0].data.profileSettings).toEqual({
+      location: null,
+      policies: { bookingPolicy: 'Call first' },
+    });
   });
 
   it('does not fabricate a profile when onboarding has not started', async () => {

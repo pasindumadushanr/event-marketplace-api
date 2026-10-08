@@ -11,6 +11,7 @@ import { EmailService } from '../email/email.service';
 import { isCategoryActive } from '../business-categories/category-tree';
 import { readCategories } from '../business-categories/category-reader';
 import { mergeProfileSettings } from './profile-settings';
+import { coordinates } from '../discovery/geo';
 
 @Injectable()
 export class VendorBusinessService {
@@ -67,6 +68,15 @@ export class VendorBusinessService {
     )
       throw new BadRequestException('Invalid profile settings');
     const settings = data.profileSettings as any;
+    if (
+      settings &&
+      'location' in settings &&
+      settings.location !== null &&
+      !coordinates(settings.location)
+    )
+      throw new BadRequestException(
+        'Business coordinates must be valid latitude and longitude numbers',
+      );
     if (settings && JSON.stringify(settings).length > 100000)
       throw new BadRequestException('Profile settings are too large');
     if (
