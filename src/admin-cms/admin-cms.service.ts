@@ -4,6 +4,7 @@ import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
 import { currentBrandContent } from './brand-content';
 import { AdminActor, recordActivity } from '../admin-activity/activity';
+import { validateImageUpload, validateSiteMedia } from './site-media';
 
 @Injectable()
 export class AdminCmsService {
@@ -281,14 +282,21 @@ export class AdminCmsService {
   }
 
   // Settings
+  async uploadSiteImage(file?: Express.Multer.File) {
+    const image = validateImageUpload(file);
+    return { url: await this.storage.uploadFile(image, 'site-media') };
+  }
+
   async getSetting(key: string) {
     const setting = await this.prisma.setting.findUnique({
       where: { key },
     });
+    if (key === 'SITE_MEDIA') return setting?.value ?? {};
     return setting ? currentBrandContent(setting.value) : null;
   }
 
   async upsertSetting(key: string, value: any, actor: AdminActor) {
+    if (key === 'SITE_MEDIA') value = validateSiteMedia(value);
     return this.prisma.$transaction(async (tx) => {
       const setting = await tx.setting.upsert({
         where: { key },

@@ -13,7 +13,7 @@
     "security:rollout": "ts-node scripts/rollout-security.ts --apply",
     "approvals:check": "ts-node scripts/rollout-approvals.ts",
     "approvals:rollout": "ts-node scripts/rollout-approvals.ts --apply",
-    "test:critical": "jest --runInBand geo.spec recaptcha.guard.spec frontend-url.spec approval-workspace.spec account-security.spec vendor-application-email.spec launch-overview.spec security-regression review-evidence.spec customer-account.service.spec inquiry.service.spec vendor-business.service.spec vendor-packages.service.spec category-reader.spec discovery.service.spec category-tree.spec category-taxonomy.spec",
+    "test:critical": "jest --runInBand site-media.spec geo.spec recaptcha.guard.spec frontend-url.spec approval-workspace.spec account-security.spec vendor-application-email.spec launch-overview.spec security-regression review-evidence.spec customer-account.service.spec inquiry.service.spec vendor-business.service.spec vendor-packages.service.spec category-reader.spec discovery.service.spec category-tree.spec category-taxonomy.spec",
     "postinstall": "npx prisma generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

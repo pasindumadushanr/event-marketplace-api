@@ -191,6 +191,16 @@ export class AdminCmsController {
   }
 
   // SETTINGS ENDPOINTS
+  @Post('images/upload')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @UseInterceptors(
+    FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  uploadSiteImage(@UploadedFile() file: Express.Multer.File) {
+    return this.service.uploadSiteImage(file);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Post('settings/:key')
@@ -204,7 +214,7 @@ export class AdminCmsController {
 
   @Get('public/settings/:key')
   async getSetting(@Param('key') key: string) {
-    if (!['FOOTER_CONTENT', 'social', 'seo'].includes(key))
+    if (!['FOOTER_CONTENT', 'social', 'seo', 'SITE_MEDIA'].includes(key))
       throw new NotFoundException('Public setting not found');
     const setting = await this.service.getSetting(key);
     if (!setting) {
