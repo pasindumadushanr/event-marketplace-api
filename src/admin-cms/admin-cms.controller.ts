@@ -63,7 +63,14 @@ export class AdminCmsController {
   }
 
   // FAQs
+  @Get('public/faqs')
+  getPublicFaqs() {
+    return this.service.getPublicFaqs();
+  }
+
   @Get('faqs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   getFaqs() {
     return this.service.getFaqs();
   }

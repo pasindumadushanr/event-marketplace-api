@@ -1,10 +1,23 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
 import { currentBrandContent } from './brand-content';
 import { AdminActor, recordActivity } from '../admin-activity/activity';
 import { validateImageUpload, validateSiteMedia } from './site-media';
+import {
+  faqInput,
+  pageInput,
+  isPolicy,
+  publication,
+  PUBLICATION_PREFIX,
+  validatePublication,
+} from './content-validation';
 
 @Injectable()
 export class AdminCmsService {
@@ -100,22 +113,32 @@ export class AdminCmsService {
       .then(currentBrandContent);
   }
 
+  async getPublicFaqs() {
+    return this.prisma.faq
+      .findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          question: true,
+          answer: true,
+          category: true,
+          sortOrder: true,
+        },
+      })
+      .then(currentBrandContent);
+  }
+
   async createFaq(data: any) {
     return this.prisma.faq.create({
-      data: {
-        question: data.question,
-        answer: data.answer,
-        category: data.category || 'GENERAL',
-        isActive: data.isActive !== undefined ? data.isActive : true,
-        sortOrder: data.sortOrder || 0,
-      },
+      data: faqInput(data),
     });
   }
 
   async updateFaq(id: string, data: any) {
     return this.prisma.faq.update({
       where: { id },
-      data,
+      data: faqInput(data, true),
     });
   }
 
@@ -133,6 +156,12 @@ export class AdminCmsService {
   }
 
   async getPageBySlug(slug: string, publicOnly = false) {
+    if (publicOnly) {
+      const snapshot = await this.prisma.setting.findUnique({
+        where: { key: PUBLICATION_PREFIX + slug },
+      });
+      if (snapshot) return currentBrandContent(snapshot.value);
+    }
     const page = await this.prisma.page.findUnique({ where: { slug } });
     if (!page) throw new NotFoundException('Page not found');
     if (publicOnly && page.status !== 'PUBLISHED')
@@ -141,34 +170,72 @@ export class AdminCmsService {
   }
 
   async createPage(data: any) {
-    return this.prisma.page.create({
-      data: {
-        title: data.title,
-        slug: data.slug,
-        content: data.content,
-        metaTitle: data.metaTitle,
-        metaDescription: data.metaDescription,
-        status: data.status || 'DRAFT',
-      },
+    const input = pageInput(data);
+    if (input.status === 'PUBLISHED') validatePublication(input);
+    return this.prisma.$transaction(async (tx) => {
+      const page = await tx.page.create({ data: input });
+      if (page.status === 'PUBLISHED') {
+        const value = publication(page);
+        await tx.setting.upsert({
+          where: { key: PUBLICATION_PREFIX + page.slug },
+          create: { key: PUBLICATION_PREFIX + page.slug, value },
+          update: { value },
+        });
+      }
+      return page;
     });
   }
 
   async updatePage(id: string, data: any) {
-    return this.prisma.page.update({
-      where: { id },
-      data: {
-        title: data.title,
-        slug: data.slug,
-        content: data.content,
-        metaTitle: data.metaTitle,
-        metaDescription: data.metaDescription,
-        status: data.status,
-      },
+    const input = pageInput(data, true);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.page.findUnique({ where: { id } });
+      if (!existing) throw new NotFoundException('Page not found');
+      const key = PUBLICATION_PREFIX + existing.slug;
+      const saved = await tx.setting.findUnique({ where: { key } });
+      if (
+        input.slug &&
+        input.slug !== existing.slug &&
+        (isPolicy(existing.slug) || saved || existing.status === 'PUBLISHED')
+      )
+        throw new BadRequestException(
+          'The URL of a policy or published page cannot be renamed',
+        );
+      // A content edit without an explicit Publish action must never change the live copy.
+      input.status = input.status || 'DRAFT';
+      if (input.status === 'PUBLISHED')
+        validatePublication({ ...existing, ...input });
+      if (!saved && existing.status === 'PUBLISHED') {
+        await tx.setting.create({
+          data: { key, value: publication(existing) },
+        });
+      }
+      const page = await tx.page.update({ where: { id }, data: input });
+      if (page.status === 'PUBLISHED') {
+        const value = publication(page);
+        await tx.setting.upsert({
+          where: { key: PUBLICATION_PREFIX + page.slug },
+          create: { key: PUBLICATION_PREFIX + page.slug, value },
+          update: { value },
+        });
+      }
+      return page;
     });
   }
 
   async deletePage(id: string) {
-    return this.prisma.page.delete({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+      const page = await tx.page.findUnique({ where: { id } });
+      if (!page) throw new NotFoundException('Page not found');
+      if (isPolicy(page.slug))
+        throw new BadRequestException(
+          'Terms and Privacy cannot be deleted. Edit and publish a replacement instead.',
+        );
+      await tx.setting.deleteMany({
+        where: { key: PUBLICATION_PREFIX + page.slug },
+      });
+      return tx.page.delete({ where: { id } });
+    });
   }
 
   // Blog Posts
@@ -296,6 +363,10 @@ export class AdminCmsService {
   }
 
   async upsertSetting(key: string, value: any, actor: AdminActor) {
+    if (key.startsWith(PUBLICATION_PREFIX))
+      throw new BadRequestException(
+        'Use the page Publish action to update published content',
+      );
     if (key === 'SITE_MEDIA') value = validateSiteMedia(value);
     return this.prisma.$transaction(async (tx) => {
       const setting = await tx.setting.upsert({
