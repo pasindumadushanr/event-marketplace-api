@@ -43,7 +43,7 @@ export class SmtpEmailProvider implements IEmailProvider {
       );
 
       const mailOptions = {
-        from: `"Nakathata.lk" <${fromEmail}>`,
+        from: { name: options.fromName || 'Nakathata.lk', address: fromEmail },
         to: options.to,
         subject: options.subject,
         html: options.html,

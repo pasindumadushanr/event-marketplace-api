@@ -11,7 +11,14 @@ import {
   UploadedFile,
   Request,
   NotFoundException,
+  Optional,
+  BadRequestException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
+import { managedKeys, validEmail } from '../platform-settings/validation';
+import { EmailService } from '../email/email.service';
+import { Throttle } from '@nestjs/throttler';
 import { AdminCmsService } from './admin-cms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../roles/guards/roles.guard';
@@ -20,7 +27,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('admin/cms')
 export class AdminCmsController {
-  constructor(private readonly service: AdminCmsService) {}
+  constructor(
+    private readonly service: AdminCmsService,
+    @Optional() private readonly settings?: PlatformSettingsService,
+    @Optional() private readonly email?: EmailService,
+  ) {}
 
   // Banners
   @Get('banners/active')
@@ -198,6 +209,41 @@ export class AdminCmsController {
   }
 
   // SETTINGS ENDPOINTS
+  @Get('public/platform-settings')
+  getPlatformSettings() {
+    return this.settings!.publicSettings();
+  }
+
+  @Get('email/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  getEmailStatus() {
+    return this.settings!.emailStatus();
+  }
+
+  @Post('email/test')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Throttle({ default: { limit: 2, ttl: 60000 } })
+  async testEmail(@Request() req: any) {
+    if (!this.settings!.emailStatus().configured)
+      throw new BadRequestException(
+        'Configure a real email provider in Render before testing',
+      );
+    if (!validEmail(req.user.email || ''))
+      throw new BadRequestException('Your account needs a valid email address');
+    const sent = await this.email!.sendMail(
+      req.user.email,
+      'Platform email test',
+      '<p>Your platform email service accepted this test message.</p>',
+    );
+    if (!sent)
+      throw new ServiceUnavailableException(
+        'Email provider rejected the test. Check the provider configuration in Render.',
+      );
+    return { accepted: true, recipient: req.user.email };
+  }
+
   @Post('images/upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
@@ -223,10 +269,17 @@ export class AdminCmsController {
   async getSetting(@Param('key') key: string) {
     if (!['FOOTER_CONTENT', 'social', 'seo', 'SITE_MEDIA'].includes(key))
       throw new NotFoundException('Public setting not found');
+    if (['seo', 'social'].includes(key) && this.settings)
+      return this.settings.read(key);
     const setting = await this.service.getSetting(key);
     if (!setting) {
       throw new NotFoundException(`Setting ${key} not found`);
     }
+    if (key === 'FOOTER_CONTENT' && this.settings)
+      return {
+        ...(setting as object),
+        socials: await this.settings.read('social'),
+      };
     return setting;
   }
 
@@ -234,6 +287,14 @@ export class AdminCmsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   async getPrivateSetting(@Param('key') key: string) {
+    if (managedKeys.includes(key) && this.settings)
+      return this.settings.read(key);
+    if (key === 'FOOTER_CONTENT' && this.settings) {
+      return {
+        ...(((await this.service.getSetting(key)) || {}) as object),
+        socials: await this.settings.read('social'),
+      };
+    }
     return this.service.getSetting(key);
   }
 }

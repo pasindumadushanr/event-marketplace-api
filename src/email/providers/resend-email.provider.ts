@@ -26,7 +26,7 @@ export class ResendEmailProvider implements IEmailProvider {
       );
 
       const { data, error } = await this.resend.emails.send({
-        from: `Nakathata.lk <${fromEmail}>`,
+        from: `"${(options.fromName || 'Nakathata.lk').replace(/["<>\r\n]/g, '')}" <${fromEmail}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,

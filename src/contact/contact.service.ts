@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Optional,
+} from '@nestjs/common';
+import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateContactDto } from './dto/create-contact.dto';
@@ -36,6 +42,7 @@ export class ContactService {
     private prisma: PrismaService,
     private emailService: EmailService,
     private configService: ConfigService,
+    @Optional() private readonly settings?: PlatformSettingsService,
   ) {}
 
   async submitContactForm(dto: CreateContactDto) {
@@ -60,10 +67,17 @@ export class ContactService {
     await this.emailService.sendContactConfirmation(dto.email, dto.name);
 
     // Send notification to the admin
-    const adminEmail = this.configService.get<string>(
+    let adminEmail = this.configService.get<string>(
       'SMTP_FROM_EMAIL',
       'admin@nakathata.lk',
     );
+    try {
+      const general = await this.settings?.read('general');
+      if (general && 'contactEmail' in general)
+        adminEmail = general.contactEmail;
+    } catch {
+      /* Keep environment fallback if the settings store is unavailable. */
+    }
     await this.emailService.sendAdminContactNotification(
       adminEmail,
       dto.name,

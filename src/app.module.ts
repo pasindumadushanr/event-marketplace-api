@@ -35,6 +35,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health/health.controller';
 import { AdminActivityController } from './admin-activity/admin-activity.controller';
+import { PlatformSettingsModule } from './platform-settings/platform-settings.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AdminActivityController } from './admin-activity/admin-activity.control
       },
     ]),
     PrismaModule,
+    PlatformSettingsModule,
     UsersModule,
     AuthModule,
     RolesModule,

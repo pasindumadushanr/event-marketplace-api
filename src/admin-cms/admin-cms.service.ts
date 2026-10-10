@@ -11,6 +11,12 @@ import { currentBrandContent } from './brand-content';
 import { AdminActor, recordActivity } from '../admin-activity/activity';
 import { validateImageUpload, validateSiteMedia } from './site-media';
 import {
+  validateSetting,
+  fields,
+  pickStrings,
+  managedKeys,
+} from '../platform-settings/validation';
+import {
   faqInput,
   pageInput,
   isPolicy,
@@ -359,6 +365,8 @@ export class AdminCmsService {
       where: { key },
     });
     if (key === 'SITE_MEDIA') return setting?.value ?? {};
+    if (managedKeys.includes(key))
+      return setting ? pickStrings(setting.value, fields[key]) : null;
     return setting ? currentBrandContent(setting.value) : null;
   }
 
@@ -368,12 +376,53 @@ export class AdminCmsService {
         'Use the page Publish action to update published content',
       );
     if (key === 'SITE_MEDIA') value = validateSiteMedia(value);
+    if (managedKeys.includes(key)) value = validateSetting(key, value);
+    if (key === 'apikeys') value = { ...value, _analyticsConfigured: true };
+    const footerSocials = key === 'FOOTER_CONTENT' ? value?.socials : undefined;
     return this.prisma.$transaction(async (tx) => {
+      if (key === 'FOOTER_CONTENT') {
+        if (!value || typeof value !== 'object' || Array.isArray(value))
+          throw new BadRequestException('Footer content must be an object');
+        for (const name of ['description', 'copyright', 'subtext']) {
+          if (
+            value[name] !== undefined &&
+            (typeof value[name] !== 'string' || value[name].length > 3000)
+          )
+            throw new BadRequestException('Invalid footer text');
+        }
+        const previous = await tx.setting.findUnique({ where: { key } });
+        value = { ...((previous?.value || {}) as object), ...value };
+      }
       const setting = await tx.setting.upsert({
         where: { key },
         update: { value },
         create: { key, value },
       });
+      // Both footer editors share one set of social links. Preserve other networks.
+      if (key === 'FOOTER_CONTENT' && footerSocials) {
+        const previous = await tx.setting.findUnique({
+          where: { key: 'social' },
+        });
+        const social = {
+          ...pickStrings(previous?.value, fields.social),
+          ...pickStrings(footerSocials, fields.social),
+        };
+        validateSetting('social', {
+          website: '',
+          facebook: '',
+          instagram: '',
+          linkedin: '',
+          twitter: '',
+          youtube: '',
+          tiktok: '',
+          ...social,
+        });
+        await tx.setting.upsert({
+          where: { key: 'social' },
+          create: { key: 'social', value: social },
+          update: { value: social },
+        });
+      }
       await recordActivity(
         tx,
         actor,

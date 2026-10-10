@@ -1,4 +1,5 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
+import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import type { IEmailProvider } from './email.interface';
 import { EmailTemplates, VendorApplicationDetails } from './email.templates';
 import { frontendUrl } from '../frontend-url';
@@ -9,6 +10,7 @@ export class EmailService {
 
   constructor(
     @Inject('EMAIL_PROVIDER') private readonly emailProvider: IEmailProvider,
+    @Optional() private readonly settings?: PlatformSettingsService,
   ) {}
 
   /**
@@ -17,7 +19,19 @@ export class EmailService {
    */
   async sendMail(to: string, subject: string, html: string): Promise<boolean> {
     try {
-      return await this.emailProvider.sendMail({ to, subject, html });
+      let fromName: string | undefined;
+      try {
+        const sender = await this.settings?.read('email');
+        if (sender && 'fromName' in sender) fromName = sender.fromName;
+      } catch {
+        /* An unavailable settings database must not prevent OTP delivery. */
+      }
+      return await this.emailProvider.sendMail({
+        to,
+        subject,
+        html,
+        ...(fromName ? { fromName } : {}),
+      });
     } catch (error) {
       this.logger.error(`Failed to send email to ${to}: ${error.message}`);
       // We return false rather than throwing so business logic is never blocked by email failures.

@@ -32,13 +32,11 @@ function database() {
       updateMany: jest.fn(),
     },
     business: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'business',
-          vendorStatus: 'UNDER_REVIEW',
-          vendor: { status: 'ACTIVE' },
-        }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'business',
+        vendorStatus: 'UNDER_REVIEW',
+        vendor: { status: 'ACTIVE' },
+      }),
       update: jest.fn().mockResolvedValue({ id: 'business' }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
@@ -280,7 +278,7 @@ describe('Admin activity history', () => {
     const db = database();
     await new AdminCmsService(db, {} as any).upsertSetting(
       'email',
-      { password: 'SECRET' },
+      { fromName: 'SECRET' },
       actor,
     );
     expect(db.$transaction).toHaveBeenCalledTimes(1);
@@ -290,6 +288,14 @@ describe('Admin activity history', () => {
     expect(JSON.stringify(db.adminActivity.create.mock.calls)).not.toContain(
       'SECRET',
     );
+    await expect(
+      new AdminCmsService(db, {} as any).upsertSetting(
+        'email',
+        { password: 'SECRET' },
+        actor,
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
   });
   it('propagates audit failure so the database transaction rolls back', async () => {
     const db = database();
