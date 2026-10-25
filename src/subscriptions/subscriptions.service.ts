@@ -1,3 +1,4 @@
+import { onlinePaymentsUnavailable } from '../payments/payments-disabled';
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -95,35 +96,8 @@ export class SubscriptionsService {
     });
   }
 
-  async subscribe(vendorId: string, planId: string) {
-    const plan = await this.prisma.subscriptionPlan.findUnique({
-      where: { id: planId },
-    });
-
-    if (!plan || !plan.isActive) {
-      throw new NotFoundException('Plan not found or inactive');
-    }
-
-    // Cancel existing active subscriptions
-    await this.prisma.vendorSubscription.updateMany({
-      where: { vendorId, status: 'ACTIVE' },
-      data: { status: 'CANCELLED' },
-    });
-
-    const startDate = new Date();
-    const endDate = addDays(startDate, plan.durationDays);
-
-    return this.prisma.vendorSubscription.create({
-      data: {
-        vendorId,
-        planId,
-        status: 'ACTIVE',
-        startDate,
-        endDate,
-        paymentStatus: 'PAID', // Auto-paid for mock flow
-        paymentMethod: 'MOCK',
-      },
-    });
+  async subscribe(_vendorId: string, _planId: string) {
+    return onlinePaymentsUnavailable();
   }
 
   // ==============================

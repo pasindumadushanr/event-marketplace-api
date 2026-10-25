@@ -1,13 +1,7 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { RolesGuard } from '../roles/guards/roles.guard';
+import { Roles } from '../roles/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('payments')
@@ -33,9 +27,9 @@ export class PaymentsController {
   }
 
   @Get('admin')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   getAdminPayments() {
-    // In a real app we'd add @Roles('ADMIN') guard here
     return this.paymentsService.getAdminPayments();
   }
 }

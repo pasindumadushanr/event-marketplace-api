@@ -1,3 +1,4 @@
+import { onlinePaymentsUnavailable } from '../payments/payments-disabled';
 import {
   Injectable,
   NotFoundException,
@@ -226,32 +227,13 @@ export class BookingsService {
     return booking;
   }
 
-  // Mock Payment Flow
-  async createMockPayment(customerId: string, bookingId: string) {
-    const booking = await (this.prisma as any).booking.findUnique({
-      where: { id: bookingId },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-
-    return {
-      checkoutUrl: `/checkout/${booking.id}`,
-      paymentSessionId: `mock_sess_${Date.now()}`,
-    };
+  // Legacy checkout routes stay closed even when called directly.
+  async createMockPayment(_customerId: string, _bookingId: string) {
+    return onlinePaymentsUnavailable();
   }
 
-  async confirmMockPayment(customerId: string, bookingId: string) {
-    const booking = await (this.prisma as any).booking.findUnique({
-      where: { id: bookingId },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-
-    return (this.prisma as any).booking.update({
-      where: { id: bookingId },
-      data: {
-        paymentStatus: 'PAID',
-        status: 'CONFIRMED',
-      },
-    });
+  async confirmMockPayment(_customerId: string, _bookingId: string) {
+    return onlinePaymentsUnavailable();
   }
 
   // Customer cancels their own booking
