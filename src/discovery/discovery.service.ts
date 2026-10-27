@@ -13,6 +13,7 @@ import {
 import { readCategories } from '../business-categories/category-reader';
 import { withReviewEvidence } from '../reviews/review-evidence';
 import { coordinates, distanceKm } from './geo';
+import { businessWhatsapp } from '../vendor-business/public-contact';
 import {
   categoryMembershipWhere,
   businessCategoryIds,
@@ -231,6 +232,7 @@ export class DiscoveryService {
           // Legacy flags have no recorded identity/registration evidence.
           isVerified: false,
           city: b.city,
+          whatsapp: businessWhatsapp(b.profileSettings),
           category: b.category,
           categories: displayedBusinessCategories(b, categoryNodes || []),
           startingPrice,

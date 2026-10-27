@@ -11,6 +11,7 @@ import { EmailService } from '../email/email.service';
 import { readCategories } from '../business-categories/category-reader';
 import { mergeProfileSettings } from './profile-settings';
 import { coordinates } from '../discovery/geo';
+import { validatePublicContact } from './public-contact';
 import {
   businessCategoryIds,
   displayedBusinessCategories,
@@ -112,6 +113,7 @@ export class VendorBusinessService {
       throw new BadRequestException(
         'Use a lowercase business URL with hyphens',
       );
+    validatePublicContact(data);
     return { ...data } as any;
   }
 
