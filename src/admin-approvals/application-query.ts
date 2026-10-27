@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { descendantIds } from '../business-categories/category-tree';
+import { categoryMembershipWhere } from '../business-categories/business-category-selection';
 
 export function applicationQuery(
   input: any,
@@ -64,9 +65,11 @@ export function applicationQuery(
   if (input.categoryId) {
     if (!categories.some((c) => c.id === input.categoryId))
       throw new BadRequestException('Category not found');
-    where.categoryId = {
-      in: descendantIds(categories as any, input.categoryId),
-    };
+    where.AND = [
+      categoryMembershipWhere(
+        descendantIds(categories as any, input.categoryId),
+      ),
+    ];
   }
   const date = (value: string) => {
     const parsed = new Date(`${value}T00:00:00Z`);

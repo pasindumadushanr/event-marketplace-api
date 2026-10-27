@@ -26,7 +26,9 @@ describe('VendorBusinessService', () => {
       expect(query.include.category.select).not.toHaveProperty('parentId');
       return business;
     });
-    await expect(service.getMyBusiness('vendor-1')).resolves.toEqual(business);
+    await expect(service.getMyBusiness('vendor-1')).resolves.toMatchObject(
+      business,
+    );
   });
 
   it('rejects invalid business coordinates before touching the database', async () => {

@@ -8,10 +8,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
-import { isCategoryActive } from '../business-categories/category-tree';
 import { readCategories } from '../business-categories/category-reader';
 import { mergeProfileSettings } from './profile-settings';
 import { coordinates } from '../discovery/geo';
+import {
+  businessCategoryIds,
+  displayedBusinessCategories,
+  prepareCategorySelection,
+} from '../business-categories/business-category-selection';
 
 @Injectable()
 export class VendorBusinessService {
@@ -41,6 +45,7 @@ export class VendorBusinessService {
       'logo',
       'coverImage',
       'categoryId',
+      'categoryIds',
       'verificationDocs',
       'profileSettings',
     ];
@@ -53,6 +58,7 @@ export class VendorBusinessService {
     for (const [key, value] of Object.entries(data)) {
       if (
         key !== 'profileSettings' &&
+        key !== 'categoryIds' &&
         value !== null &&
         typeof value !== 'string'
       )
@@ -138,14 +144,20 @@ export class VendorBusinessService {
       );
     }
 
-    return business;
+    const ids = businessCategoryIds(business);
+    const categories =
+      ids.length > 1 ? (await readCategories(this.prisma)).rows : [];
+    return {
+      ...business,
+      categoryIds: ids,
+      categories: displayedBusinessCategories(business, categories),
+    };
   }
 
   async submitOnboarding(vendorId: string, data: any) {
     data = this.editableData(data);
     const { rows: categories } = await readCategories(this.prisma);
-    if (!isCategoryActive(categories, data.categoryId))
-      throw new BadRequestException('Choose an active business category.');
+    data = prepareCategorySelection(data, null, categories);
     const existing = await (this.prisma as any).business.findFirst({
       where: { vendorId },
     });
@@ -230,8 +242,12 @@ export class VendorBusinessService {
         'Only applications needing changes can be resubmitted',
       );
     const { rows: categories } = await readCategories(this.prisma);
-    if (!isCategoryActive(categories, data.categoryId || business.categoryId))
-      throw new BadRequestException('Choose an active business category');
+    data = prepareCategorySelection(data, business, categories);
+    if (data.profileSettings)
+      data.profileSettings = mergeProfileSettings(
+        (business.profileSettings as any) || {},
+        data.profileSettings,
+      );
     const updated = { ...business, ...data };
     if (
       ![updated.name, updated.phone, updated.email].every(
@@ -319,14 +335,15 @@ export class VendorBusinessService {
       throw new NotFoundException('Business not found.');
     }
 
-    // Merge profileSettings if provided
+    // Validate both top-level selections and direct JSON edits; neither can bypass
+    // active-category checks. Existing single-category profiles need no migration.
     if (
-      data.categoryId !== undefined &&
-      data.categoryId !== business.categoryId
+      data.categoryId !== undefined ||
+      data.categoryIds !== undefined ||
+      (data.profileSettings && 'categoryIds' in data.profileSettings)
     ) {
       const { rows: categories } = await readCategories(this.prisma);
-      if (!isCategoryActive(categories, data.categoryId))
-        throw new BadRequestException('Choose an active business category.');
+      data = prepareCategorySelection(data, business, categories);
     }
     if (data.profileSettings) {
       const existingSettings = business.profileSettings || {};

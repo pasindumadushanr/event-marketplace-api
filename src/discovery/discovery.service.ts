@@ -13,6 +13,11 @@ import {
 import { readCategories } from '../business-categories/category-reader';
 import { withReviewEvidence } from '../reviews/review-evidence';
 import { coordinates, distanceKm } from './geo';
+import {
+  categoryMembershipWhere,
+  businessCategoryIds,
+  displayedBusinessCategories,
+} from '../business-categories/business-category-selection';
 
 @Injectable()
 export class DiscoveryService {
@@ -102,10 +107,12 @@ export class DiscoveryService {
       ];
     }
 
+    let categoryNodes: any[] | undefined;
     if (categoryId || categorySlug) {
       const { rows: nodes, hierarchyAvailable } = await readCategories(
         this.prisma,
       );
+      categoryNodes = nodes;
       const requested = categoryId
         ? nodes.find((node) => node.id === String(categoryId))
         : nodes.find((node) => node.slug === String(categorySlug));
@@ -135,9 +142,11 @@ export class DiscoveryService {
             .map((node) => node.id);
       }
       const visible = nodes.filter((node) => isCategoryActive(nodes, node.id));
-      where.categoryId = {
-        in: ids.filter((id) => visible.some((node) => node.id === id)),
-      };
+      where.AND = [
+        categoryMembershipWhere(
+          ids.filter((id) => visible.some((node) => node.id === id)),
+        ),
+      ];
     }
 
     if (city) {
@@ -183,7 +192,14 @@ export class DiscoveryService {
       (this.prisma as any).business.count({ where }),
     ]);
 
-    // Map the results to include computed fields for the VendorCard
+    if (
+      !categoryNodes &&
+      businesses.some((b) => businessCategoryIds(b).length > 1)
+    ) {
+      categoryNodes = (await readCategories(this.prisma)).rows;
+    }
+    // Each business is queried once, not joined per category: pagination and
+    // totals remain distinct even when multiple selected categories match.
     const mappedBusinesses = businesses
       .map((b) => {
         const position = coordinates(b.profileSettings?.location);
@@ -216,6 +232,7 @@ export class DiscoveryService {
           isVerified: false,
           city: b.city,
           category: b.category,
+          categories: displayedBusinessCategories(b, categoryNodes || []),
           startingPrice,
           rating: Number(avgRating),
           reviewCount: b.reviews.length,
@@ -354,8 +371,13 @@ export class DiscoveryService {
       const key = item.date.toISOString().slice(0, 10);
       counts.set(key, (counts.get(key) || 0) + 1);
     }
+    const categoryIds = businessCategoryIds(business);
+    const categoryNodes =
+      categoryIds.length > 1 ? (await readCategories(this.prisma)).rows : [];
     return {
       ...publicBusiness,
+      categoryIds,
+      categories: displayedBusinessCategories(business, categoryNodes),
       isVerified: false,
       verification: {
         isBusinessVerified: false,

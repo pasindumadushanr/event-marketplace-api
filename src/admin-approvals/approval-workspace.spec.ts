@@ -124,7 +124,25 @@ describe('Approval filters and queue', () => {
       pageSize: 25,
       where: {
         district: { equals: 'Jaffna', mode: 'insensitive' },
-        categoryId: { in: ['root', 'child'] },
+        AND: [
+          {
+            OR: [
+              { categoryId: { in: ['root', 'child'] } },
+              {
+                profileSettings: {
+                  path: ['categoryIds'],
+                  array_contains: ['root'],
+                },
+              },
+              {
+                profileSettings: {
+                  path: ['categoryIds'],
+                  array_contains: ['child'],
+                },
+              },
+            ],
+          },
+        ],
         vendorStatus: { in: ['PENDING', 'UNDER_REVIEW', 'NEEDS_INFO'] },
       },
     });

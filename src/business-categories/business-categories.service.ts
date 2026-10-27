@@ -6,13 +6,21 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { descendantIds, isCategoryActive } from './category-tree';
 import { readCategories } from './category-reader';
+import {
+  businessCategoryIds,
+  categoryMembershipWhere,
+} from './business-category-selection';
 
 @Injectable()
 export class BusinessCategoriesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(includeInactive = false) {
-    const { rows: categories } = await readCategories(this.prisma, true);
+    const { rows: categories } = await readCategories(this.prisma);
+    const businesses = await this.prisma.business.findMany({
+      where: { status: 'ACTIVE' },
+      select: { categoryId: true, profileSettings: true },
+    });
     const visible = includeInactive
       ? categories
       : categories.filter((node) => isCategoryActive(categories, node.id));
@@ -20,9 +28,14 @@ export class BusinessCategoriesService {
       const ids = new Set(descendantIds(visible, node.id));
       return {
         ...node,
-        businessCount: visible
-          .filter((item) => ids.has(item.id))
-          .reduce((sum, item) => sum + (item._count?.businesses || 0), 0),
+        _count: {
+          businesses: businesses.filter((business) =>
+            businessCategoryIds(business).includes(node.id),
+          ).length,
+        },
+        businessCount: businesses.filter((business) =>
+          businessCategoryIds(business).some((id) => ids.has(id)),
+        ).length,
       };
     });
   }
@@ -119,7 +132,10 @@ export class BusinessCategoriesService {
       include: { _count: { select: { businesses: true, children: true } } },
     });
     if (!node) throw new NotFoundException('Category not found');
-    if (node._count.businesses || node._count.children)
+    const attached = await this.prisma.business.count({
+      where: categoryMembershipWhere([id]),
+    });
+    if (attached || node._count.businesses || node._count.children)
       throw new BadRequestException(
         'This category has vendors or subcategories. Deactivate it instead.',
       );
