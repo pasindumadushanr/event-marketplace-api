@@ -17,6 +17,13 @@ const config = (values: Record<string, string>) =>
   }) as ConfigService;
 
 describe('Connected platform settings', () => {
+  it('accepts only supported homepage versions and preserves legacy settings compatibility', () => {
+    for (const homepageVersion of ['v1', 'v2'])
+      expect(validateSetting('general', { ...defaultGeneral, homepageVersion }).homepageVersion).toBe(homepageVersion);
+    expect(() => validateSetting('general', { ...defaultGeneral, homepageVersion: 'v3' })).toThrow('Choose Home V1 or Home V2');
+    const { homepageVersion: _version, ...legacy } = defaultGeneral;
+    expect(validateSetting('general', legacy).homepageVersion).toBe('v2');
+  });
   let store: Map<string, any>;
   let db: any;
   let settings: PlatformSettingsService;
@@ -53,6 +60,13 @@ describe('Connected platform settings', () => {
       analytics: { googleAnalyticsId: null },
     });
     expect(db.setting.upsert).not.toHaveBeenCalled();
+  });
+  it('publishes the admin-selected homepage without altering other settings', async () => {
+    store.set('general', { ...defaultGeneral, siteName: 'Wedding directory', homepageVersion: 'v1' });
+    const result = await settings.publicSettings();
+    expect(result.general).toMatchObject({ siteName: 'Wedding directory', homepageVersion: 'v1' });
+    store.set('general', { ...defaultGeneral, homepageVersion: 'v2' });
+    expect((await settings.publicSettings()).general?.homepageVersion).toBe('v2');
   });
   it('never exposes legacy SMTP secrets or unrelated API keys', async () => {
     store.set('email', {

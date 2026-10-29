@@ -7,6 +7,7 @@ export const defaultGeneral = {
   supportPhone: '',
   contactAddress: 'Sri Lanka',
   currency: 'LKR',
+  homepageVersion: 'v2',
 };
 export const defaultSeo = {
   metaTitle: 'Nakathata.lk | Wedding Venues & Event Services in Sri Lanka',
@@ -48,6 +49,8 @@ export function validateSetting(key: string, value: any) {
       'Unsupported setting. Private credentials must be configured in Render.',
     );
   const result = pickStrings(value, fields[key]);
+  if (key === 'general' && value.homepageVersion === undefined)
+    result.homepageVersion = 'v2';
   if (Object.keys(result).length !== fields[key].length)
     throw new BadRequestException(
       'All setting fields must be provided as text',
@@ -61,6 +64,8 @@ export function validateSetting(key: string, value: any) {
       throw new BadRequestException(`Invalid ${name}`);
   }
   if (key === 'general') {
+    if (!['v1', 'v2'].includes(result.homepageVersion))
+      throw new BadRequestException('Choose Home V1 or Home V2');
     if (!result.siteName || !validEmail(result.contactEmail))
       throw new BadRequestException(
         'Enter a site name and valid support email',
