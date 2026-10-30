@@ -7,6 +7,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model InvitationStudioMember {
+  userId    String   @id @db.Uuid
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model WeddingInvitation {
   id             String   @id @default(uuid()) @db.Uuid
   slug           String   @unique
@@ -91,6 +97,7 @@ model Permission {
 }
 
 model User {
+  invitationStudioMembership InvitationStudioMember?
   id                 String     @id @default(uuid()) @db.Uuid
   firstName          String
   lastName           String

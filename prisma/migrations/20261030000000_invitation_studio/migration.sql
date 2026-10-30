@@ -19,3 +19,9 @@ CREATE INDEX "WeddingInvitation_status_updatedAt_idx" ON "WeddingInvitation"("st
 INSERT INTO "Role" ("id", "name", "description")
 VALUES ('a55d7c27-4bab-4e31-bdbf-354d4f30f4d1', 'INVITATION_STAFF', 'Invitation Studio only; no marketplace administration')
 ON CONFLICT ("name") DO NOTHING;
+CREATE TABLE "InvitationStudioMember" (
+  "userId" UUID NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "InvitationStudioMember_pkey" PRIMARY KEY ("userId"),
+  CONSTRAINT "InvitationStudioMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);

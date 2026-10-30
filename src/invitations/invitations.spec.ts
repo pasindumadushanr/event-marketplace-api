@@ -8,7 +8,8 @@ import {
 } from './invitations.controller';
 import { invitationContent, invitationSlug } from './invitation-content';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../roles/guards/roles.guard';
+import { StudioAccessGuard } from './studio-access.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 const content = {
   partnerOne: 'Amaya',
@@ -181,11 +182,22 @@ describe('Invitation lifecycle and privacy', () => {
 });
 describe('Studio HTTP role boundaries', () => {
   let app: INestApplication;
+  let approvedAdmin = false;
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [InvitationStudioController, PublicInvitationsController],
       providers: [
-        RolesGuard,
+        StudioAccessGuard,
+        {
+          provide: PrismaService,
+          useValue: {
+            invitationStudioMember: {
+              findUnique: jest.fn(async () =>
+                approvedAdmin ? { userId: id } : null,
+              ),
+            },
+          },
+        },
         {
           provide: InvitationsService,
           useValue: {
@@ -227,6 +239,17 @@ describe('Studio HTTP role boundaries', () => {
     await request(app.getHttpServer())
       .get('/invitation-studio/invitations')
       .expect(401);
+  });
+  it('allows the explicitly approved existing admin without changing the ADMIN role', async () => {
+    approvedAdmin = true;
+    try {
+      await request(app.getHttpServer())
+        .get('/invitation-studio/invitations')
+        .set('x-test-role', 'ADMIN')
+        .expect(200);
+    } finally {
+      approvedAdmin = false;
+    }
   });
   it.each(['SUPER_ADMIN', 'INVITATION_STAFF'])(
     'permits authorized %s',

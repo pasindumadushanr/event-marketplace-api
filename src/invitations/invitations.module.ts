@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { StudioAccessGuard } from './studio-access.guard';
 import { InvitationsService } from './invitations.service';
 import {
   InvitationStudioController,
@@ -9,6 +10,7 @@ import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storag
 @Module({
   controllers: [InvitationStudioController, PublicInvitationsController],
   providers: [
+    StudioAccessGuard,
     InvitationsService,
     { provide: STORAGE_PROVIDER, useClass: CloudinaryStorageProvider },
   ],

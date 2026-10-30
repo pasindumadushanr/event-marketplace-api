@@ -17,16 +17,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../roles/guards/roles.guard';
-import { Roles } from '../roles/decorators/roles.decorator';
+import { StudioAccessGuard } from './studio-access.guard';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
 import { validateImageUpload } from '../admin-cms/site-media';
 import { InvitationsService } from './invitations.service';
 
 @Controller('invitation-studio')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('SUPER_ADMIN', 'INVITATION_STAFF')
+@UseGuards(JwtAuthGuard, StudioAccessGuard)
 export class InvitationStudioController {
   constructor(
     private readonly service: InvitationsService,
