@@ -68,7 +68,7 @@ export class AuthService {
 
     const roleName = (user as any).role.name;
 
-    if (roleName === 'ADMIN' || roleName === 'SUPER_ADMIN') {
+    if (['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'].includes(roleName)) {
       const otp = randomInt(100000, 1000000).toString();
       const expiry = new Date();
       expiry.setMinutes(expiry.getMinutes() + 15);
@@ -103,7 +103,7 @@ export class AuthService {
       throw new BadRequestException('User not found or inactive');
 
     const roleName = (user as any).role.name;
-    if (roleName !== 'ADMIN' && roleName !== 'SUPER_ADMIN') {
+    if (!['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'].includes(roleName)) {
       throw new BadRequestException('Invalid role for admin login');
     }
 
@@ -201,7 +201,7 @@ export class AuthService {
         emailVerified: true,
         role: { connect: { id: customerRole.id } },
       });
-    } else if (['ADMIN', 'SUPER_ADMIN'].includes((user as any).role?.name)) {
+    } else if (['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'].includes((user as any).role?.name)) {
       throw new UnauthorizedException(
         'Administrators must use the admin login with email verification',
       );

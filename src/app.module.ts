@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { InvitationsModule } from './invitations/invitations.module';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -39,6 +40,7 @@ import { PlatformSettingsModule } from './platform-settings/platform-settings.mo
 
 @Module({
   imports: [
+    InvitationsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),

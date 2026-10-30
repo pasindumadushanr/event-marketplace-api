@@ -223,12 +223,12 @@ describe('Session revocation', () => {
       service.verifyAdminLoginOtp('a', '123456'),
     ).rejects.toMatchObject({ status: 400 });
   });
-  it('does not let administrators bypass email verification with Google login', async () => {
+  it.each(['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'])('does not let %s bypass email verification with Google login', async (roleName) => {
     const service = new AuthService(
       {
         findAuthByEmail: async () => ({
           status: 'ACTIVE',
-          role: { name: 'ADMIN' },
+          role: { name: roleName },
         }),
       } as any,
       {} as any,
