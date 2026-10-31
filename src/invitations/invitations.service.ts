@@ -61,15 +61,15 @@ export class InvitationsService {
   async create(body: any, actor: string) {
     const draft = invitationContent(body?.draft);
     const slug = invitationSlug(body?.slug);
-    if (body.templateId !== 'W01')
-      throw new BadRequestException('Choose Template W01');
+    if (!['W01', 'W02'].includes(body.templateId))
+      throw new BadRequestException('Choose an available invitation template');
     try {
       return safeRow(
         await this.db.weddingInvitation.create({
           data: {
             slug,
             draft,
-            templateId: 'W01',
+            templateId: body.templateId,
             createdBy: actor,
             updatedBy: actor,
           },

@@ -139,10 +139,19 @@ describe('Invitation lifecycle and privacy', () => {
     expect(row.slug).toBe('amaya-kasun');
     await expect(
       service.create(
-        { slug: 'other-couple', templateId: 'W02', draft: content },
+        { slug: 'other-couple', templateId: 'W99', draft: content },
         id,
       ),
-    ).rejects.toThrow('Template W01');
+    ).rejects.toThrow('available invitation template');
+  });
+  it('preserves the Sinhala design and content through creation, review and publication', async () => {
+    const draft = { ...content, partnerOne: 'අමායා', partnerTwo: 'කසුන්', welcome: 'ඔබට ආදරයෙන් ඇරයුම් කරමු.' };
+    row = await service.create({ slug: 'sinhala-wedding', templateId: 'W02', draft }, id);
+    expect(row.templateId).toBe('W02');
+    const review = await service.action(id, { action: 'review', revision: 1 }, id);
+    expect(await service.review({ id, token: review.reviewToken })).toMatchObject({ templateId: 'W02', content: { partnerOne: 'අමායා' } });
+    await service.action(id, { action: 'publish', revision: 2, approved: true }, id);
+    expect(await service.publicInvitation(row.slug)).toMatchObject({ templateId: 'W02', content: { welcome: draft.welcome } });
   });
   it('hashes review tokens, expires them and revokes them when edits are saved', async () => {
     const reviewed = await service.action(
