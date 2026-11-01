@@ -1,3 +1,4 @@
+import { VendorApprovedGuard } from '../auth/guards/vendor-approved.guard';
 import {
   Controller,
   Get,
@@ -13,7 +14,7 @@ import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
 
 @Controller('vendor/reviews')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, VendorApprovedGuard)
 @Roles('VENDOR')
 export class VendorReviewsController {
   constructor(private readonly vendorReviewsService: VendorReviewsService) {}

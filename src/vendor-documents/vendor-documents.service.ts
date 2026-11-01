@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
@@ -36,25 +37,10 @@ export class VendorDocumentsService {
     type: string,
     file: Express.Multer.File,
   ) {
-    const business = await this.prisma.business.findFirst({
-      where: { vendorId },
-      select: { id: true },
-    });
-
-    if (!business) {
-      throw new NotFoundException('Business not found');
-    }
-
-    const url = await this.storage.uploadFile(file, 'documents');
-
-    return this.prisma.document.create({
-      data: {
-        businessId: business.id,
-        type: type || 'OTHER',
-        url: url,
-        status: 'PENDING',
-      },
-    });
+    // Private delivery and retention must be in place before collecting IDs.
+    throw new ServiceUnavailableException(
+      'Document uploads are paused while private verification is prepared. Contact support; do not send identity documents by email or WhatsApp.',
+    );
   }
 
   async deleteDocument(vendorId: string, documentId: string) {

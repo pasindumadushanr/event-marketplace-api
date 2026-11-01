@@ -14,13 +14,17 @@ export class VendorApprovedGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user; // Set by JwtAuthGuard
 
-    if (!user || user.role !== 'VENDOR') {
+    if (!user || user.role?.name !== 'VENDOR' || user.status !== 'ACTIVE') {
       throw new ForbiddenException('Access restricted to vendors.');
     }
+    if (!user.emailVerified)
+      throw new ForbiddenException(
+        'Verify your email before using vendor tools.',
+      );
 
     // Check if the vendor's business is approved
     const business = await this.prisma.business.findFirst({
-      where: { vendorId: user.userId },
+      where: { vendorId: user.id },
       select: { vendorStatus: true },
     });
 

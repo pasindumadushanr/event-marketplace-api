@@ -158,6 +158,37 @@ export class UsersService {
       }
     }
 
+    if (updateData.email !== undefined) {
+      if (
+        typeof updateData.email !== 'string' ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updateData.email.trim())
+      )
+        throw new BadRequestException('Enter a valid email address');
+      updateData.email = updateData.email.trim().toLowerCase();
+      const account = await this.prisma.user.findUnique({ where: { id } });
+      if (!account) throw new BadRequestException('Account not found');
+      if (updateData.email !== account.email) {
+        if (account.authProvider === 'google')
+          throw new BadRequestException('Your email is managed by Google');
+        if (
+          typeof data.currentPassword !== 'string' ||
+          !account.password ||
+          !(await bcrypt.compare(data.currentPassword, account.password))
+        )
+          throw new BadRequestException(
+            'Enter your current password to change your email',
+          );
+        Object.assign(updateData, {
+          emailVerified: false,
+          sessionVersion: { increment: 1 },
+          hashedRefreshToken: null,
+          otpPurpose: null,
+          emailVerificationOtp: null,
+          emailVerificationOtpExpiry: null,
+        });
+      }
+    }
+
     // Check if email or phone is already taken by someone else
     if (updateData.email || updateData.phone) {
       const orConditions: any[] = [];
@@ -181,7 +212,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const update = {
       where: { id },
       data: updateData,
       select: {
@@ -191,8 +222,20 @@ export class UsersService {
         email: true,
         phone: true,
         profileImage: true,
-      },
-    });
+        emailVerified: true,
+      } as const,
+    };
+    if (updateData.emailVerified === false) {
+      return this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.update(update);
+        await tx.business.updateMany({
+          where: { vendorId: id, status: 'ACTIVE' },
+          data: { status: 'INACTIVE' },
+        });
+        return user;
+      });
+    }
+    return this.prisma.user.update(update);
   }
 
   async updatePassword(
@@ -260,6 +303,19 @@ export class UsersService {
       where: { id: userId },
       data: { hashedRefreshToken },
     });
+  }
+
+  async consumeRefreshToken(
+    id: string,
+    hashedRefreshToken: string,
+    sessionVersion: number,
+  ) {
+    const result = await this.prisma.user.updateMany({
+      where: { id, hashedRefreshToken, sessionVersion, status: 'ACTIVE' },
+      data: { hashedRefreshToken: null },
+    });
+    if (result.count !== 1)
+      throw new BadRequestException('Session changed. Please sign in again.');
   }
 
   async updateUser(id: string, data: Prisma.UserUpdateInput) {

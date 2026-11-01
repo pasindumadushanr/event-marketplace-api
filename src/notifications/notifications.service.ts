@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -11,8 +11,8 @@ export class NotificationsService {
       where: {
         OR: [
           { userId }, // direct
-          { targetRole: roleName }, // role-based broadcast
-          { targetRole: 'ALL' }, // global broadcast
+          { userId: null, targetRole: roleName }, // role-based broadcast
+          { userId: null, targetRole: 'ALL' }, // global broadcast
         ],
       },
       orderBy: { createdAt: 'desc' },
@@ -32,7 +32,9 @@ export class NotificationsService {
         data: { isRead: true },
       });
     }
-    return notif;
+    throw new NotFoundException(
+      'Notification not found or not a direct notification',
+    );
   }
 
   // Admin endpoint: broadcast to all users, specific role, or specific user
@@ -46,7 +48,7 @@ export class NotificationsService {
       data: {
         title: data.title,
         message: data.message,
-        targetRole: data.targetRole || 'ALL',
+        targetRole: data.userId ? null : data.targetRole || 'ALL',
         userId: data.userId || null,
       },
     });

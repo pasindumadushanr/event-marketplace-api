@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ServiceUnavailableException,
+  Logger,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -10,10 +12,11 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { RolesService } from '../roles/roles.service';
 import { EmailService } from '../email/email.service';
-import { randomInt } from 'crypto';
+import { createHash, randomInt, randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -79,7 +82,21 @@ export class AuthService {
         emailVerificationOtpExpiry: expiry,
       });
 
-      await this.emailService.sendOtpEmail(user.email, user.firstName, otp);
+      const sent = await this.emailService.sendOtpEmail(
+        user.email,
+        user.firstName,
+        otp,
+      );
+      if (!sent) {
+        await this.usersService.updateUser(user.id, {
+          otpPurpose: null,
+          emailVerificationOtp: null,
+          emailVerificationOtpExpiry: null,
+        });
+        throw new ServiceUnavailableException(
+          'We could not send your sign-in email. Please try again shortly.',
+        );
+      }
 
       return {
         requiresOtp: true,
@@ -141,10 +158,16 @@ export class AuthService {
     roleName: string,
     firstName: string,
     lastName: string,
+    expectedVersion?: number,
   ) {
     const account = await this.usersService.findSessionById(userId);
     if (!account || account.status !== 'ACTIVE')
       throw new UnauthorizedException('Account is not active');
+    if (
+      expectedVersion !== undefined &&
+      account.sessionVersion !== expectedVersion
+    )
+      throw new UnauthorizedException('Session expired. Please sign in again.');
     const payload = {
       sub: userId,
       email,
@@ -152,15 +175,22 @@ export class AuthService {
       sv: account.sessionVersion,
     };
 
-    const accessToken = this.jwtService.sign({ ...payload, type: 'access' });
+    const accessToken = this.jwtService.sign(
+      { ...payload, type: 'access' },
+      { expiresIn: '1h' },
+    );
 
     const refreshToken = this.jwtService.sign(
-      { ...payload, type: 'refresh' },
+      { ...payload, type: 'refresh', jti: randomUUID() },
       { expiresIn: '7d' },
     );
 
     const salt = await bcrypt.genSalt(10);
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
+    // Hash a fixed-length digest so bcrypt's 72-byte limit cannot truncate JWTs.
+    const hashedRefreshToken = await bcrypt.hash(
+      createHash('sha256').update(refreshToken).digest('hex'),
+      salt,
+    );
 
     await this.usersService.updateRefreshToken(userId, hashedRefreshToken);
 
@@ -201,7 +231,11 @@ export class AuthService {
         emailVerified: true,
         role: { connect: { id: customerRole.id } },
       });
-    } else if (['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'].includes((user as any).role?.name)) {
+    } else if (
+      ['ADMIN', 'SUPER_ADMIN', 'INVITATION_STAFF'].includes(
+        (user as any).role?.name,
+      )
+    ) {
       throw new UnauthorizedException(
         'Administrators must use the admin login with email verification',
       );
@@ -219,11 +253,58 @@ export class AuthService {
     return user;
   }
 
+  async refresh(refreshToken: unknown) {
+    if (typeof refreshToken !== 'string' || refreshToken.length > 4096)
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    let payload: { sub: string; type: string; sv: number };
+    try {
+      payload = this.jwtService.verify(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    }
+    if (payload.type !== 'refresh' || typeof payload.sub !== 'string')
+      throw new UnauthorizedException('Invalid session token');
+    const user = await this.usersService.findAuthById(payload.sub);
+    if (
+      !user ||
+      user.status !== 'ACTIVE' ||
+      user.sessionVersion !== payload.sv ||
+      !user.hashedRefreshToken ||
+      !(await bcrypt.compare(
+        createHash('sha256').update(refreshToken).digest('hex'),
+        user.hashedRefreshToken,
+      ))
+    )
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    await this.usersService.consumeRefreshToken(
+      user.id,
+      user.hashedRefreshToken,
+      user.sessionVersion,
+    );
+    return this.generateTokens(
+      user.id,
+      user.email,
+      (user as any).role.name,
+      user.firstName,
+      user.lastName,
+      payload.sv,
+    );
+  }
+
   async sendVerificationOtp(userId: string) {
     const user = await this.usersService.findAuthById(userId);
     if (!user) throw new BadRequestException('User not found');
     if (user.emailVerified)
       throw new BadRequestException('Email already verified');
+    if (
+      user.otpPurpose === 'EMAIL_VERIFY' &&
+      user.emailVerificationOtpExpiry &&
+      new Date(user.emailVerificationOtpExpiry).getTime() >
+        Date.now() + 14 * 60000
+    )
+      throw new BadRequestException(
+        'Please wait one minute before requesting another code',
+      );
 
     // Generate 6 digit OTP
     const otp = randomInt(100000, 1000000).toString();
@@ -239,12 +320,30 @@ export class AuthService {
     });
 
     // Send Email
-    await this.emailService.sendOtpEmail(user.email, user.firstName, otp);
-
-    return { message: 'OTP sent successfully' };
+    const sent = await this.emailService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
+    if (!sent) {
+      await this.usersService.updateUser(userId, {
+        otpPurpose: null,
+        emailVerificationOtp: null,
+        emailVerificationOtpExpiry: null,
+      });
+      throw new ServiceUnavailableException(
+        'We could not send your verification email. Please try again shortly.',
+      );
+    }
+    return {
+      message:
+        'Verification email accepted for delivery. Please check your inbox and spam folder.',
+    };
   }
 
   async verifyEmailOtp(userId: string, otp: string) {
+    if (typeof otp !== 'string' || !/^\d{6}$/.test(otp))
+      throw new BadRequestException('Enter a valid 6-digit code');
     const user = await this.usersService.findAuthById(userId);
     if (!user) throw new BadRequestException('User not found');
 
@@ -264,6 +363,7 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP');
     }
 
+    await this.usersService.consumeOtp(userId, 'EMAIL_VERIFY', otp);
     await this.usersService.updateUser(userId, {
       emailVerified: true,
       otpPurpose: null,
@@ -299,11 +399,15 @@ export class AuthService {
       emailVerificationOtpExpiry: expiry,
     });
 
-    await this.emailService.sendPasswordResetEmail(
+    const sent = await this.emailService.sendPasswordResetEmail(
       user.email,
       user.firstName,
       otp,
     );
+    if (!sent)
+      this.logger.warn(
+        'Password reset email could not be delivered; check the email provider.',
+      );
 
     return {
       message:

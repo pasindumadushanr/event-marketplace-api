@@ -1,3 +1,4 @@
+import { VendorApprovedGuard } from '../auth/guards/vendor-approved.guard';
 import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { VendorRevenueService } from './vendor-revenue.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -5,7 +6,7 @@ import { RolesGuard } from '../roles/guards/roles.guard';
 import { Roles } from '../roles/decorators/roles.decorator';
 
 @Controller('vendor/revenue')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, VendorApprovedGuard)
 @Roles('VENDOR')
 export class VendorRevenueController {
   constructor(private readonly vendorRevenueService: VendorRevenueService) {}

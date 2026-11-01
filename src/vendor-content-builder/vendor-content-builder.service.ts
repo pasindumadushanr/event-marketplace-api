@@ -10,6 +10,31 @@ import { PrismaService } from '../prisma/prisma.service';
 export class VendorContentBuilderService {
   constructor(private prisma: PrismaService) {}
 
+  private editableData(data: Record<string, unknown>) {
+    if (!data || typeof data !== 'object' || Array.isArray(data))
+      throw new BadRequestException('Invalid section details');
+    const limits: Record<string, number> = {
+      title: 160,
+      description: 10000,
+      imageUrl: 2048,
+      type: 30,
+      position: 40,
+      status: 20,
+    };
+    if (Object.keys(data).some((key) => !Object.hasOwn(limits, key)))
+      throw new BadRequestException('Only section content can be edited');
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value !== 'string' || value.length > limits[key])
+        throw new BadRequestException(`Invalid section ${key}`);
+    }
+    if (
+      data.status &&
+      !['DRAFT', 'PUBLISHED', 'ARCHIVED'].includes(String(data.status))
+    )
+      throw new BadRequestException('Invalid section status');
+    return data;
+  }
+
   private async getBusinessByVendorId(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
@@ -31,6 +56,7 @@ export class VendorContentBuilderService {
   }
 
   async createBlock(vendorId: string, data: any) {
+    data = this.editableData(data);
     const business = await this.getBusinessByVendorId(vendorId);
 
     // Enforce MVP limit of 10 blocks
@@ -63,6 +89,7 @@ export class VendorContentBuilderService {
   }
 
   async updateBlock(vendorId: string, id: string, data: any) {
+    data = this.editableData(data);
     const business = await this.getBusinessByVendorId(vendorId);
 
     const block = await (this.prisma as any).businessContentSection.findFirst({
