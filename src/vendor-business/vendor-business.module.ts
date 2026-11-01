@@ -3,18 +3,11 @@ import { VendorBusinessService } from './vendor-business.service';
 import { VendorBusinessController } from './vendor-business.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
-import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storage.provider';
-import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
+import { MediaStorageModule } from '../common/providers/media-storage.module';
 
 @Module({
-  imports: [PrismaModule, EmailModule],
+  imports: [MediaStorageModule, PrismaModule, EmailModule],
   controllers: [VendorBusinessController],
-  providers: [
-    VendorBusinessService,
-    {
-      provide: STORAGE_PROVIDER,
-      useClass: CloudinaryStorageProvider,
-    },
-  ],
+  providers: [VendorBusinessService],
 })
 export class VendorBusinessModule {}

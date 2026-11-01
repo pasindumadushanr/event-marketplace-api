@@ -5,14 +5,10 @@ import {
   InvitationStudioController,
   PublicInvitationsController,
 } from './invitations.controller';
-import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
-import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storage.provider';
+import { MediaStorageModule } from '../common/providers/media-storage.module';
 @Module({
+  imports: [MediaStorageModule],
   controllers: [InvitationStudioController, PublicInvitationsController],
-  providers: [
-    StudioAccessGuard,
-    InvitationsService,
-    { provide: STORAGE_PROVIDER, useClass: CloudinaryStorageProvider },
-  ],
+  providers: [StudioAccessGuard, InvitationsService],
 })
 export class InvitationsModule {}

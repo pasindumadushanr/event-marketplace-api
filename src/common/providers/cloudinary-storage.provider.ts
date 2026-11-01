@@ -2,10 +2,31 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { StorageProvider } from './storage.provider';
 import { v2 as cloudinary } from 'cloudinary';
 import * as streamifier from 'streamifier';
+
+export class CloudinaryQuotaExceededException extends ServiceUnavailableException {
+  constructor() {
+    super('Cloudinary media quota exceeded');
+  }
+}
+
+export function isCloudinaryQuotaError(error: {
+  http_code?: number;
+  message?: string;
+}): boolean {
+  // Authentication, malformed uploads and transient network failures must not silently fail over.
+  if (Number(error.http_code) === 401) return false;
+  const message = error.message || '';
+  return (
+    /quota|credits?|storage|bandwidth|usage limits?|plan limits?/i.test(
+      message,
+    ) && /exceed|exhaust|limit|reached/i.test(message)
+  );
+}
 
 @Injectable()
 export class CloudinaryStorageProvider implements StorageProvider {
@@ -31,6 +52,8 @@ export class CloudinaryStorageProvider implements StorageProvider {
         },
         (error, result) => {
           if (error) {
+            if (isCloudinaryQuotaError(error))
+              return reject(new CloudinaryQuotaExceededException());
             this.logger.error('Cloudinary Upload Error', error);
             return reject(
               new InternalServerErrorException(
@@ -56,7 +79,16 @@ export class CloudinaryStorageProvider implements StorageProvider {
 
   async deleteFile(fileUrl: string): Promise<void> {
     try {
-      if (!fileUrl.includes('cloudinary.com')) return;
+      const url = new URL(fileUrl);
+      if (
+        url.protocol !== 'https:' ||
+        url.hostname !== 'res.cloudinary.com' ||
+        url.username ||
+        url.password
+      )
+        return;
+      if (url.pathname.split('/')[1] !== process.env.CLOUDINARY_CLOUD_NAME)
+        return;
 
       // Extract public ID from URL
       // Example: https://res.cloudinary.com/cloud_name/image/upload/v1234567/folder/file_name.jpg

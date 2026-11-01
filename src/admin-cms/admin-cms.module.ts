@@ -2,18 +2,11 @@ import { Module } from '@nestjs/common';
 import { AdminCmsService } from './admin-cms.service';
 import { AdminCmsController } from './admin-cms.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
-import { CloudinaryStorageProvider } from '../common/providers/cloudinary-storage.provider';
+import { MediaStorageModule } from '../common/providers/media-storage.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [MediaStorageModule, PrismaModule],
   controllers: [AdminCmsController],
-  providers: [
-    AdminCmsService,
-    {
-      provide: STORAGE_PROVIDER,
-      useClass: CloudinaryStorageProvider,
-    },
-  ],
+  providers: [AdminCmsService],
 })
 export class AdminCmsModule {}

@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { whatsappNumber } from '../vendor-business/public-contact';
+import { r2ObjectKey } from '../common/providers/r2-config';
 
 export function invitationContent(input: any, publish = false) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
@@ -40,7 +41,10 @@ export function invitationContent(input: any, publish = false) {
       const u = new URL(value);
       if (
         u.protocol === 'https:' &&
-        u.hostname === 'res.cloudinary.com' &&
+        (u.hostname === 'res.cloudinary.com' ||
+          r2ObjectKey(value)?.startsWith(
+            'event_marketplace/wedding-invitations/',
+          )) &&
         !u.username &&
         !u.password
       )
