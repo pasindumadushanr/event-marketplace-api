@@ -52,6 +52,8 @@ beforeEach(() => {
     'R2_ACCOUNT_ID',
     'R2_BUCKET_NAME',
     'CLOUDFLARE_R2_ANALYTICS_TOKEN',
+    'MEDIA_STORAGE_PROVIDER',
+    'INVITATION_MEDIA_STORAGE_PROVIDER',
   ])
     delete process.env[k];
 });
@@ -60,6 +62,18 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 describe('Media usage reports', () => {
+  it('reports invitation storage separately from vendor storage', async () => {
+    process.env.MEDIA_STORAGE_PROVIDER = 'cloudinary';
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'r2';
+    expect(await new MediaUsageService().overview()).toMatchObject({
+      uploadMode: 'cloudinary',
+      invitationUploadMode: 'r2',
+    });
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'inherit';
+    expect(
+      (await new MediaUsageService().overview()).invitationUploadMode,
+    ).toBe('cloudinary');
+  });
   it('reports missing integrations honestly without contacting providers', async () => {
     const cloud = jest.spyOn(cloudinary.api, 'usage');
     const fetch = jest.spyOn(global, 'fetch');
@@ -119,12 +133,10 @@ describe('Media usage reports', () => {
   });
   it('rejects malformed negative usage instead of presenting it as spare capacity', async () => {
     cloudConfig();
-    jest
-      .spyOn(cloudinary.api, 'usage')
-      .mockResolvedValue({
-        credits: { usage: -5, limit: 25 },
-        storage: { usage: -1 },
-      } as any);
+    jest.spyOn(cloudinary.api, 'usage').mockResolvedValue({
+      credits: { usage: -5, limit: 25 },
+      storage: { usage: -1 },
+    } as any);
     expect((await new MediaUsageService().overview()).cloudinary.status).toBe(
       'unavailable',
     );
@@ -175,16 +187,14 @@ describe('Media usage reports', () => {
   });
   it('accepts a provider-confirmed zero-byte report', async () => {
     r2Config();
-    jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        r2Response([
-          {
-            max: { payloadSize: 0, metadataSize: 0, objectCount: 0 },
-            dimensions: { datetime: '2026-11-01T06:00:00Z' },
-          },
-        ]),
-      );
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      r2Response([
+        {
+          max: { payloadSize: 0, metadataSize: 0, objectCount: 0 },
+          dimensions: { datetime: '2026-11-01T06:00:00Z' },
+        },
+      ]),
+    );
     expect((await new MediaUsageService().overview()).r2).toMatchObject({
       status: 'ok',
       storageBytes: 0,
@@ -193,14 +203,12 @@ describe('Media usage reports', () => {
   });
   it('handles HTTP-200 GraphQL errors without leaking tokens or reporting zero', async () => {
     r2Config();
-    jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          errors: [{ message: 'private-analytics-token rejected' }],
-        }),
-      } as Response);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        errors: [{ message: 'private-analytics-token rejected' }],
+      }),
+    } as Response);
     const report = await new MediaUsageService().overview();
     expect(report.r2).toMatchObject({
       status: 'unavailable',

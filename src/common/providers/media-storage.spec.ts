@@ -48,6 +48,7 @@ beforeEach(() => {
   process.env = { ...savedEnv };
   for (const k of [
     'MEDIA_STORAGE_PROVIDER',
+    'INVITATION_MEDIA_STORAGE_PROVIDER',
     'R2_ACCOUNT_ID',
     'R2_BUCKET_NAME',
     'R2_ACCESS_KEY_ID',
@@ -93,6 +94,50 @@ describe('Storage selection and failover', () => {
     expect(await p.storage.uploadFile(image, 'business')).toBe('r2-url');
     expect(p.cloudinary.uploadFile).not.toHaveBeenCalled();
     expect(p.r2.configure).toHaveBeenCalled();
+  });
+  it('stores invitation images in R2 while vendor and website media stay on Cloudinary', async () => {
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'r2';
+    const p = providers();
+    expect(await p.storage.uploadFile(image, 'wedding-invitations')).toBe(
+      'r2-url',
+    );
+    for (const folder of ['business', 'gallery', 'site-media', undefined])
+      expect(await p.storage.uploadFile(image, folder)).toBe('cloudinary-url');
+    expect(p.r2.uploadFile).toHaveBeenCalledTimes(1);
+    expect(p.cloudinary.uploadFile).not.toHaveBeenCalledWith(
+      image,
+      'wedding-invitations',
+    );
+  });
+  it('inherits the general provider for invitations unless explicitly overridden', async () => {
+    process.env.MEDIA_STORAGE_PROVIDER = 'r2';
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'inherit';
+    expect(
+      await providers().storage.uploadFile(image, 'wedding-invitations'),
+    ).toBe('r2-url');
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'cloudinary';
+    const p = providers();
+    expect(await p.storage.uploadFile(image, 'wedding-invitations')).toBe(
+      'cloudinary-url',
+    );
+    expect(await p.storage.uploadFile(image, 'business')).toBe('r2-url');
+  });
+  it('reports an invitation R2 failure without silently moving the image elsewhere', async () => {
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'r2';
+    const p = providers();
+    p.r2.uploadFile.mockRejectedValue(new Error('R2 unavailable'));
+    await expect(
+      p.storage.uploadFile(image, 'wedding-invitations'),
+    ).rejects.toThrow('R2 unavailable');
+    expect(p.cloudinary.uploadFile).not.toHaveBeenCalled();
+  });
+  it('validates the invitation setting and R2 credentials before startup', () => {
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'invalid';
+    expect(() => providers()).toThrow('INVITATION_MEDIA_STORAGE_PROVIDER');
+    process.env.INVITATION_MEDIA_STORAGE_PROVIDER = 'r2';
+    expect(
+      () => new MediaStorageProvider({} as any, new R2StorageProvider()),
+    ).toThrow('Configure R2');
   });
   it('falls back only after an explicit Cloudinary quota error', async () => {
     process.env.MEDIA_STORAGE_PROVIDER = 'cloudinary-r2-fallback';

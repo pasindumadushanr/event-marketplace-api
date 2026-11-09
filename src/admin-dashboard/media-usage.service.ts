@@ -26,6 +26,7 @@ export type MediaUsage = {
   checkedAt: string;
   cacheSeconds: number;
   uploadMode: string;
+  invitationUploadMode: string;
   cloudinary: {
     status: UsageStatus;
     message: string;
@@ -70,6 +71,11 @@ export class MediaUsageService {
         checkedAt: new Date().toISOString(),
         cacheSeconds: 300,
         uploadMode: process.env.MEDIA_STORAGE_PROVIDER?.trim() || 'cloudinary',
+        invitationUploadMode:
+          !process.env.INVITATION_MEDIA_STORAGE_PROVIDER?.trim() ||
+          process.env.INVITATION_MEDIA_STORAGE_PROVIDER?.trim() === 'inherit'
+            ? process.env.MEDIA_STORAGE_PROVIDER?.trim() || 'cloudinary'
+            : process.env.INVITATION_MEDIA_STORAGE_PROVIDER.trim(),
         cloudinary: cloudinaryUsage,
         r2,
       };

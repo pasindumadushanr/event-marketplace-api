@@ -3,8 +3,8 @@ import { BadRequestException } from '@nestjs/common';
 export const managedKeys = ['general', 'seo', 'social', 'apikeys', 'email'];
 export const defaultGeneral = {
   siteName: 'Nakathata.lk',
-  contactEmail: 'support@nakathata.lk',
-  supportPhone: '',
+  contactEmail: 'hello@nakathata.lk',
+  supportPhone: '+94 76 076 2353',
   contactAddress: 'Sri Lanka',
   currency: 'LKR',
   homepageVersion: 'v2',

@@ -11,6 +11,7 @@ import { StorageProvider } from './storage.provider';
 export class MediaStorageProvider implements StorageProvider {
   private readonly logger = new Logger(MediaStorageProvider.name);
   private readonly mode: 'cloudinary' | 'r2' | 'cloudinary-r2-fallback';
+  private readonly invitationMode: 'inherit' | 'cloudinary' | 'r2';
 
   constructor(
     private readonly cloudinary: CloudinaryStorageProvider,
@@ -26,13 +27,25 @@ export class MediaStorageProvider implements StorageProvider {
         'MEDIA_STORAGE_PROVIDER must be cloudinary, r2 or cloudinary-r2-fallback',
       );
     this.mode = mode;
-    if (mode !== 'cloudinary') this.r2.configure();
+    const invitationMode =
+      process.env.INVITATION_MEDIA_STORAGE_PROVIDER?.trim() || 'inherit';
+    if (!['inherit', 'cloudinary', 'r2'].includes(invitationMode))
+      throw new Error(
+        'INVITATION_MEDIA_STORAGE_PROVIDER must be inherit, cloudinary or r2',
+      );
+    this.invitationMode = invitationMode as 'inherit' | 'cloudinary' | 'r2';
+    if (mode !== 'cloudinary' || invitationMode === 'r2') this.r2.configure();
   }
 
   async uploadFile(
     file: Express.Multer.File,
     folder?: string,
   ): Promise<string> {
+    // Only the invitation studio uses this server-selected folder.
+    if (folder === 'wedding-invitations' && this.invitationMode !== 'inherit')
+      return this.invitationMode === 'r2'
+        ? this.r2.uploadFile(file, folder)
+        : this.cloudinary.uploadFile(file, folder);
     if (this.mode === 'r2') return this.r2.uploadFile(file, folder);
     try {
       return await this.cloudinary.uploadFile(file, folder);
