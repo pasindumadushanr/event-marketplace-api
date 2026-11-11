@@ -21,8 +21,12 @@ describe('Connected platform settings', () => {
     for (const homepageVersion of ['v1', 'v2'])
       expect(validateSetting('general', { ...defaultGeneral, homepageVersion }).homepageVersion).toBe(homepageVersion);
     expect(() => validateSetting('general', { ...defaultGeneral, homepageVersion: 'v3' })).toThrow('Choose Home V1 or Home V2');
-    const { homepageVersion: _version, ...legacy } = defaultGeneral;
+    for (const prelaunchBanner of ['enabled', 'disabled'])
+      expect(validateSetting('general', { ...defaultGeneral, prelaunchBanner }).prelaunchBanner).toBe(prelaunchBanner);
+    expect(() => validateSetting('general', { ...defaultGeneral, prelaunchBanner: 'invalid' })).toThrow('Choose enabled or disabled for pre-launch banner');
+    const { homepageVersion: _version, prelaunchBanner: _banner, ...legacy } = defaultGeneral;
     expect(validateSetting('general', legacy).homepageVersion).toBe('v2');
+    expect(validateSetting('general', legacy).prelaunchBanner).toBe('enabled');
   });
   let store: Map<string, any>;
   let db: any;
