@@ -65,6 +65,13 @@ export class UsersService {
     });
   }
 
+  async findAuthByGoogleId(googleId: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { googleId },
+      include: { role: true },
+    });
+  }
+
   findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },

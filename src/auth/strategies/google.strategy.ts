@@ -19,10 +19,12 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         configService.get<string>('GOOGLE_CALLBACK_URL') ||
         'http://localhost:3001/auth/google/callback',
       scope: ['email', 'profile'],
+      passReqToCallback: true,
     });
   }
 
   async validate(
+    req: any,
     accessToken: string,
     refreshToken: string,
     profile: any,
@@ -34,13 +36,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       const user = {
         googleId: id,
         email: emails[0].value,
-        firstName: name.givenName || '',
-        lastName: name.familyName || '',
-        profileImage: photos[0]?.value,
-        accessToken,
+        firstName: name?.givenName || '',
+        lastName: name?.familyName || '',
+        profileImage: photos?.[0]?.value,
+        emailVerified:
+          emails[0]?.verified === true ||
+          profile._json?.email_verified === true ||
+          profile._json?.verified_email === true,
+        hostedDomain: profile._json?.hd,
       };
 
-      const dbUser = await this.authService.validateOAuthLogin(user);
+      const dbUser = await this.authService.validateOAuthLogin(
+        user,
+        req.googleIntent,
+      );
       done(null, dbUser);
     } catch (error) {
       this.logger.error('Error during Google authentication', error);

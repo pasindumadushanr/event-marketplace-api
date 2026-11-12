@@ -9,7 +9,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { GoogleLoginGuard } from './guards/google-login.guard';
 import { frontendUrl as getFrontendUrl } from '../frontend-url';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -108,12 +108,21 @@ export class AuthController {
   }
 
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleLoginGuard)
   @ApiOperation({ summary: 'Initiate Google OAuth Login' })
   async googleAuth(@Req() req) {}
 
+  @Get('google/vendor-status')
+  googleVendorStatus() {
+    return {
+      enabled: Boolean(
+        process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+      ),
+    };
+  }
+
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleLoginGuard)
   @ApiOperation({ summary: 'Google OAuth Callback' })
   async googleAuthRedirect(@Req() req, @Res() res) {
     // The user is injected by Passport's GoogleStrategy
@@ -128,10 +137,10 @@ export class AuthController {
       user.lastName,
     );
 
-    // Redirect to frontend with tokens in URL
+    // Keep session tokens out of server access logs and referrer query strings.
     const frontendUrl = getFrontendUrl();
     res.redirect(
-      `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+      `${frontendUrl}/auth/callback#accessToken=${encodeURIComponent(tokens.accessToken)}&refreshToken=${encodeURIComponent(tokens.refreshToken)}`,
     );
   }
 }

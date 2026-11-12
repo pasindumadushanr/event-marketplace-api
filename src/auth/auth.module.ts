@@ -9,6 +9,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { RolesModule } from '../roles/roles.module';
 import { EmailModule } from '../email/email.module';
 import { RecaptchaModule } from '../recaptcha/recaptcha.module';
+import { GoogleLoginGuard } from './guards/google-login.guard';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { RecaptchaModule } from '../recaptcha/recaptcha.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GoogleLoginGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

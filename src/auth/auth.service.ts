@@ -212,11 +212,21 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  async validateOAuthLogin(profile: any) {
-    let user = await this.usersService.findAuthByEmail(profile.email);
+  async validateOAuthLogin(
+    profile: any,
+    intent: 'vendor' | 'customer' = 'customer',
+  ) {
+    if (!profile.googleId || !profile.email || profile.emailVerified !== true)
+      throw new UnauthorizedException('Google email is not verified');
+    const authoritativeEmail =
+      /@gmail\.com$/i.test(profile.email) || !!profile.hostedDomain;
+    let user = await this.usersService.findAuthByGoogleId(profile.googleId);
+    if (!user) user = await this.usersService.findAuthByEmail(profile.email);
 
     if (!user) {
-      const customerRole = await this.rolesService.findByName('CUSTOMER');
+      const customerRole = await this.rolesService.findByName(
+        intent === 'vendor' ? 'VENDOR' : 'CUSTOMER',
+      );
       if (!customerRole) {
         throw new BadRequestException('Roles not initialized in DB');
       }
@@ -228,7 +238,7 @@ export class AuthService {
         profileImage: profile.profileImage,
         authProvider: 'google',
         googleId: profile.googleId,
-        emailVerified: true,
+        emailVerified: authoritativeEmail,
         role: { connect: { id: customerRole.id } },
       });
     } else if (
@@ -241,16 +251,36 @@ export class AuthService {
       );
     } else if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Account is not active');
-    } else if (!user.googleId || !user.emailVerified) {
-      // Link Google account and mark email as verified since Google verified it
+    } else if (intent === 'vendor' && (user as any).role?.name !== 'VENDOR') {
+      throw new UnauthorizedException(
+        'Use the customer login for this account',
+      );
+    } else if (user.googleId && user.googleId !== profile.googleId) {
+      throw new UnauthorizedException('A different Google account is linked');
+    } else if (!user.googleId || (!user.emailVerified && authoritativeEmail)) {
+      if (!user.googleId && !authoritativeEmail)
+        throw new UnauthorizedException(
+          'Sign in with your password to verify this account',
+        );
       user = await this.usersService.updateUser(user.id, {
         googleId: profile.googleId,
-        authProvider: 'google',
-        emailVerified: true,
+        // Keep password login working for existing password-based accounts.
+        ...(user.password ? {} : { authProvider: 'google' }),
+        ...(authoritativeEmail ? { emailVerified: true } : {}),
       });
     }
 
-    return user;
+    // create/update helpers may omit the role relation. Reload before issuing
+    // tokens so linking never accidentally issues a CUSTOMER session to a vendor.
+    const authenticated = await this.usersService.findAuthById(user.id);
+    if (
+      !authenticated ||
+      authenticated.status !== 'ACTIVE' ||
+      !['CUSTOMER', 'VENDOR'].includes((authenticated as any).role?.name) ||
+      (intent === 'vendor' && (authenticated as any).role?.name !== 'VENDOR')
+    )
+      throw new UnauthorizedException('Account unavailable');
+    return authenticated;
   }
 
   async refresh(refreshToken: unknown) {
