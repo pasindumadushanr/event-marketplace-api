@@ -14,6 +14,12 @@ import { DiscoveryService } from './discovery.service';
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
+  @Get('statistics')
+  @Header('Cache-Control', 'no-store')
+  statistics() {
+    return this.discoveryService.getStatistics();
+  }
+
   @Get('sitemap')
   sitemap() {
     return this.discoveryService.getSitemap();

@@ -24,6 +24,35 @@ import {
 export class DiscoveryService {
   constructor(private prisma: PrismaService) {}
 
+  async getStatistics() {
+    // Return aggregate counts only, never account or business records.
+    const [registeredVendors, customerAccounts, publishedVendors, categories] =
+      await Promise.all([
+        this.prisma.user.count({
+          where: { status: 'ACTIVE', role: { name: 'VENDOR' } },
+        }),
+        this.prisma.user.count({
+          where: { status: 'ACTIVE', role: { name: 'CUSTOMER' } },
+        }),
+        this.prisma.business.count({
+          where: {
+            status: 'ACTIVE',
+            vendorStatus: 'APPROVED',
+            vendor: { status: 'ACTIVE' },
+          },
+        }),
+        readCategories(this.prisma),
+      ]);
+    return {
+      registeredVendors,
+      customerAccounts,
+      publishedVendors,
+      serviceCategories: categories.rows.filter((node) =>
+        isCategoryActive(categories.rows, node.id),
+      ).length,
+    };
+  }
+
   async getSitemap() {
     const businesses = await this.prisma.business.findMany({
       where: { status: 'ACTIVE', vendorStatus: 'APPROVED' },
