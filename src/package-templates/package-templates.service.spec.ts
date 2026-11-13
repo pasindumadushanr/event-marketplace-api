@@ -7,7 +7,10 @@ describe('PackageTemplatesService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [PackageTemplatesService],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     service = module.get<PackageTemplatesService>(PackageTemplatesService);
   });

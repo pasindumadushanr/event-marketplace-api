@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Req,
   Res,
+  Header,
 } from '@nestjs/common';
 import { GoogleLoginGuard } from './guards/google-login.guard';
 import { frontendUrl as getFrontendUrl } from '../frontend-url';
@@ -24,6 +25,14 @@ import { Throttle } from '@nestjs/throttler';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('vendor-trial')
+  @Header('Cache-Control', 'private, no-store')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  vendorTrial(@CurrentUser() user: any) {
+    return this.authService.getVendorTrial(user.id);
+  }
 
   @Post('register')
   @UseGuards(RecaptchaGuard)

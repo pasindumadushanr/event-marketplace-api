@@ -7,7 +7,10 @@ describe('PackageTemplatesController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PackageTemplatesController],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     controller = module.get<PackageTemplatesController>(
       PackageTemplatesController,

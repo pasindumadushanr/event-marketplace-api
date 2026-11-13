@@ -4,6 +4,11 @@
   "description": "",
   "author": "",
   "private": true,
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    }
+  },
   "license": "UNLICENSED",
   "scripts": {
     "categories:sync": "ts-node prisma/seed-categories.ts",
@@ -13,7 +18,7 @@
     "security:rollout": "ts-node scripts/rollout-security.ts --apply",
     "approvals:check": "ts-node scripts/rollout-approvals.ts",
     "approvals:rollout": "ts-node scripts/rollout-approvals.ts --apply",
-    "test:critical": "jest --runInBand google-vendor.spec media-usage.spec media-storage.spec vendor-launch-hardening.spec invitations.spec public-contact.spec payments-disabled.spec platform-settings.spec cms-publication.spec site-media.spec geo.spec recaptcha.guard.spec frontend-url.spec approval-workspace.spec account-security.spec vendor-application-email.spec launch-overview.spec security-regression review-evidence.spec customer-account.service.spec inquiry.service.spec vendor-business.service.spec vendor-packages.service.spec multiple-categories.spec category-reader.spec discovery.service.spec category-tree.spec category-taxonomy.spec",
+    "test:critical": "jest --runInBand vendor-trial.spec upload-limits.spec google-vendor.spec media-usage.spec media-storage.spec vendor-launch-hardening.spec invitations.spec public-contact.spec payments-disabled.spec platform-settings.spec cms-publication.spec site-media.spec geo.spec recaptcha.guard.spec frontend-url.spec approval-workspace.spec account-security.spec vendor-application-email.spec launch-overview.spec security-regression review-evidence.spec customer-account.service.spec inquiry.service.spec vendor-business.service.spec vendor-packages.service.spec multiple-categories.spec category-reader.spec discovery.service.spec category-tree.spec category-taxonomy.spec",
     "postinstall": "npx prisma generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -50,7 +55,7 @@
     "cloudinary": "^2.10.0",
     "date-fns": "^4.4.0",
     "helmet": "^8.3.0",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.1.4",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",

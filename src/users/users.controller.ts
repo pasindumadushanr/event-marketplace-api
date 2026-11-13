@@ -96,7 +96,17 @@ export class UsersController {
 
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 30,
+        parts: 31,
+        fieldSize: 65536,
+      },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

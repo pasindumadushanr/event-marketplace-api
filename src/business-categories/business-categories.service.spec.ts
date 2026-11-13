@@ -32,6 +32,14 @@ describe('BusinessCategoriesService', () => {
   };
   const service = new BusinessCategoriesService({
     businessCategory: category,
+    business: {
+      findMany: jest.fn().mockResolvedValue([
+        { categoryId: 'root' },
+        { categoryId: 'child' }, { categoryId: 'child' },
+        { categoryId: 'leaf' }, { categoryId: 'leaf' }, { categoryId: 'leaf' },
+      ]),
+      count: jest.fn().mockResolvedValue(0),
+    },
   } as unknown as PrismaService);
   beforeEach(() => {
     jest.clearAllMocks();

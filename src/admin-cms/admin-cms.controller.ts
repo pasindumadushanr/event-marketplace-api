@@ -49,7 +49,17 @@ export class AdminCmsController {
   @Post('banners')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 30,
+        parts: 31,
+        fieldSize: 65536,
+      },
+    }),
+  )
   createBanner(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
     return this.service.createBanner(body, file);
   }
@@ -57,7 +67,17 @@ export class AdminCmsController {
   @Patch('banners/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 30,
+        parts: 31,
+        fieldSize: 65536,
+      },
+    }),
+  )
   updateBanner(
     @Param('id') id: string,
     @Body() body: any,
@@ -161,7 +181,17 @@ export class AdminCmsController {
   @Post('blog')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
-  @UseInterceptors(FileInterceptor('coverImage'))
+  @UseInterceptors(
+    FileInterceptor('coverImage', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 30,
+        parts: 31,
+        fieldSize: 65536,
+      },
+    }),
+  )
   createBlogPost(
     @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
@@ -173,7 +203,17 @@ export class AdminCmsController {
   @Patch('blog/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
-  @UseInterceptors(FileInterceptor('coverImage'))
+  @UseInterceptors(
+    FileInterceptor('coverImage', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 30,
+        parts: 31,
+        fieldSize: 65536,
+      },
+    }),
+  )
   updateBlogPost(
     @Param('id') id: string,
     @Body() body: any,

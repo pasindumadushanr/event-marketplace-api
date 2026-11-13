@@ -7,7 +7,10 @@ describe('BookingsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingsController],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     controller = module.get<BookingsController>(BookingsController);
   });

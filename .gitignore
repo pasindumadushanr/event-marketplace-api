@@ -45,6 +45,8 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+.tmp-baseline-*
+.tmp-launch-test-results.json
 
 # Runtime data
 pids

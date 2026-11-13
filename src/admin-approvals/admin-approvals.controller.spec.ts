@@ -7,7 +7,10 @@ describe('AdminApprovalsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AdminApprovalsController],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     controller = module.get<AdminApprovalsController>(AdminApprovalsController);
   });

@@ -7,7 +7,10 @@ describe('SubscriptionsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SubscriptionsController],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     controller = module.get<SubscriptionsController>(SubscriptionsController);
   });

@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { RolesService } from '../roles/roles.service';
 import { EmailService } from '../email/email.service';
 import { createHash, randomInt, randomUUID } from 'crypto';
+import { vendorTrial } from './vendor-trial';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,17 @@ export class AuthService {
     private rolesService: RolesService,
     private emailService: EmailService,
   ) {}
+
+  async getVendorTrial(userId: string) {
+    const user = await this.usersService.findAuthById(userId);
+    if (
+      !user ||
+      user.status !== 'ACTIVE' ||
+      (user as any).role?.name !== 'VENDOR'
+    )
+      throw new UnauthorizedException('Vendor account required');
+    return vendorTrial(user.createdAt);
+  }
 
   async register(registerDto: RegisterDto) {
     const requestedRoleName =

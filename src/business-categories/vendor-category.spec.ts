@@ -27,13 +27,13 @@ describe('vendor category selection', () => {
   });
   it('accepts a specific service', async () => {
     await service.updateMyBusiness('v', { categoryId: 'service' });
-    expect(business.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: { categoryId: 'service' } });
+    expect(business.update).toHaveBeenCalledWith({ where: { id: 'b' }, data: expect.objectContaining({ categoryId: 'service' }) });
   });
   it('requires an active category for new vendor registration', async () => {
     await expect(service.submitOnboarding('v', { categoryId: 'old' })).rejects.toThrow('active business category');
     business.findFirst.mockResolvedValue(null);
     business.create.mockResolvedValue({ id: 'new-business' });
     await service.submitOnboarding('v', { name: 'New vendor', categoryId: 'service' });
-    expect(business.create).toHaveBeenCalledWith({ data: { name: 'New vendor', categoryId: 'service', vendorId: 'v', vendorStatus: 'UNDER_REVIEW' } });
+    expect(business.create).toHaveBeenCalledWith({ data: { name: 'New vendor', categoryId: 'service', vendorId: 'v', vendorStatus: 'UNDER_REVIEW', status: 'INACTIVE', submittedAt: expect.any(Date) } });
   });
 });

@@ -7,7 +7,10 @@ describe('SubscriptionsService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [SubscriptionsService],
-    }).compile();
+    })
+      // Construction smoke test: keep database, email and network dependencies isolated.
+      .useMocker(() => ({}))
+      .compile();
 
     service = module.get<SubscriptionsService>(SubscriptionsService);
   });

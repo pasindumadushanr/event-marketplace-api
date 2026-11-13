@@ -6,7 +6,7 @@ describe('EmailService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EmailService],
+      providers: [EmailService, { provide: 'EMAIL_PROVIDER', useValue: { sendMail: jest.fn().mockResolvedValue(true) } }],
     }).compile();
 
     service = module.get<EmailService>(EmailService);
@@ -14,5 +14,9 @@ describe('EmailService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('sends through the injected provider, without a real email connection', async () => {
+    await expect(service.sendMail('test@example.com', 'Test', '<p>Test</p>')).resolves.toBe(true);
   });
 });
