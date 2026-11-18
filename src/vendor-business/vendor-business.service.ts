@@ -75,6 +75,32 @@ export class VendorBusinessService {
     )
       throw new BadRequestException('Invalid profile settings');
     const settings = data.profileSettings as any;
+    if (settings && 'customCategoryRequests' in settings) {
+      const requests = settings.customCategoryRequests;
+      if (
+        !Array.isArray(requests) ||
+        requests.length > 5 ||
+        requests.some(
+          (name: unknown) =>
+            typeof name !== 'string' ||
+            name.trim().length < 2 ||
+            name.trim().length > 80 ||
+            /[<>\u0000-\u001f\u007f]/u.test(name),
+        )
+      )
+        throw new BadRequestException(
+          'Enter up to 5 custom category names, each between 2 and 80 characters.',
+        );
+      const normalized = requests.map((name: string) =>
+        name.normalize('NFC').trim().replace(/\s+/gu, ' '),
+      );
+      settings.customCategoryRequests = normalized.filter(
+        (name: string, index: number) =>
+          normalized.findIndex(
+            (item: string) => item.toLowerCase() === name.toLowerCase(),
+          ) === index,
+      );
+    }
     if (
       settings &&
       'location' in settings &&
