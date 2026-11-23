@@ -119,7 +119,7 @@ describe('vendor custom category requests', () => {
     });
     expect(prisma.business.create.mock.calls[0][0].data).toMatchObject({
       vendorId: 'owner',
-      vendorStatus: 'UNDER_REVIEW',
+      vendorStatus: 'PENDING',
       status: 'INACTIVE',
       categoryId: 'photo',
       profileSettings: { customCategoryRequests: ['Drone filming'] },

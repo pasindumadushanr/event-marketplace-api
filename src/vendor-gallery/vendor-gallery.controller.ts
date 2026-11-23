@@ -1,4 +1,4 @@
-import { VendorApprovedGuard } from '../auth/guards/vendor-approved.guard';
+import { VendorWorkspaceGuard } from '../auth/guards/vendor-approved.guard';
 import {
   Controller,
   Get,
@@ -24,7 +24,7 @@ import { STORAGE_PROVIDER } from '../common/providers/storage.provider';
 import type { StorageProvider } from '../common/providers/storage.provider';
 
 @Controller('vendor/gallery')
-@UseGuards(JwtAuthGuard, RolesGuard, VendorApprovedGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, VendorWorkspaceGuard)
 @Roles('VENDOR')
 export class VendorGalleryController {
   constructor(

@@ -25,7 +25,7 @@ export const EmailTemplates = {
     <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
       <h2>Nakathata.lk application update</h2><p>Hi ${escapeHtml(name)},</p><p>Your application for <strong>${escapeHtml(business)}</strong> ${action === 'APPROVED' ? 'has been approved.' : action === 'REJECTED' ? 'was not approved at this time.' : 'needs more information before we can finish the review.'}</p>
       ${message ? `<p style="white-space:pre-wrap;background:#f8fafc;padding:16px">${escapeHtml(message)}</p>` : ''}
-      <p>${action === 'APPROVED' ? 'Approval does not publish your business automatically. Complete your profile, preview it, then publish from your dashboard.' : 'Open your dashboard to update the application, attach any requested documents, and resubmit for review.'}</p>
+      <p>${action === 'APPROVED' ? 'Your profile stays private until you publish it from your dashboard.' : 'Open your dashboard to update your profile, attach any requested documents, and submit it for review again.'}</p>
       <a href="${escapeHtml(dashboardUrl)}">Open vendor dashboard</a><p>Nakathata.lk review team</p>
     </div>`,
   getContactConfirmationTemplate: (name: string) => `
@@ -86,8 +86,8 @@ export const EmailTemplates = {
     reviewUrl = 'https://nakathata.lk/admin/vendors/approvals',
   ) => `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #0f172a;">New Vendor Application</h2>
-      <p style="color: #475569; line-height: 1.6;">A new vendor has submitted their business application and is waiting for your review.</p>
+      <h2 style="color: #0f172a;">Vendor Profile Ready for Review</h2>
+      <p style="color: #475569; line-height: 1.6;">A vendor has submitted their private business profile for review before publishing.</p>
       <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 15px;">
         <p style="color: #475569; margin: 5px 0;"><strong>Vendor Name:</strong> ${escapeHtml(vendorName)}</p>
         <p style="color: #475569; margin: 5px 0;"><strong>Business Name:</strong> ${escapeHtml(businessName)}</p>

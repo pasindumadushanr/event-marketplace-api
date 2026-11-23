@@ -78,6 +78,11 @@ export class VendorBusinessController {
     return this.service.resubmitOnboarding(req.user.id, data);
   }
 
+  @Post('profile-review')
+  submitProfileReview(@Request() req: any) {
+    return this.service.submitProfileReview(req.user.id);
+  }
+
   @Patch()
   updateMyBusiness(@Request() req: any, @Body() data: any) {
     return this.service.updateMyBusiness(req.user.id, data);

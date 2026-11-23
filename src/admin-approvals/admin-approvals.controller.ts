@@ -39,9 +39,10 @@ export class AdminApprovalsController {
   @Patch(':id/approve')
   approveApplication(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body('submittedAt') submittedAt: string,
     @Request() req: any,
   ) {
-    return this.service.approveApplication(id, req.user);
+    return this.service.approveApplication(id, req.user, submittedAt);
   }
 
   @Patch(':id/reject')

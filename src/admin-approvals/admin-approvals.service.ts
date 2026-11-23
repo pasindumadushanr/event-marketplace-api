@@ -1,3 +1,4 @@
+import { profileReviewDigest, reviewRelations } from '../vendor-business/profile-review';
 import {
   BadRequestException,
   Injectable,
@@ -196,7 +197,7 @@ export class AdminApprovalsService {
           },
         },
       }),
-      count(['PENDING', 'UNDER_REVIEW', 'NEEDS_INFO']),
+      count(['UNDER_REVIEW', 'NEEDS_INFO']),
       count(['APPROVED']),
       count(['REJECTED']),
     ]);
@@ -303,8 +304,8 @@ export class AdminApprovalsService {
     return value.trim();
   }
 
-  async approveApplication(id: string, actor: AdminActor) {
-    return this.decide(id, 'APPROVED', null, actor);
+  async approveApplication(id: string, actor: AdminActor, submittedAt?: string) {
+    return this.decide(id, 'APPROVED', null, actor, submittedAt);
   }
   async rejectApplication(id: string, reason: string, actor: AdminActor) {
     return this.decide(
@@ -328,18 +329,18 @@ export class AdminApprovalsService {
     status: 'APPROVED' | 'REJECTED' | 'NEEDS_INFO',
     message: string | null,
     actor: AdminActor,
+    submittedAt?: string,
   ) {
     const event = await this.prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
         where: { id },
-        select: {
-          id: true,
-          vendorStatus: true,
+        include: {
+          ...reviewRelations,
           vendor: { select: { status: true } },
         },
       });
       if (!business) throw new NotFoundException('Application not found');
-      if (!['UNDER_REVIEW', 'PENDING'].includes(business.vendorStatus))
+      if (business.vendorStatus !== 'UNDER_REVIEW')
         throw new ConflictException(
           'This application has changed. Reload it before reviewing.',
         );
@@ -347,8 +348,13 @@ export class AdminApprovalsService {
         throw new BadRequestException(
           'The vendor account must be active before approval',
         );
+      const digest = (business.profileSettings as any)?.profileReviewDigest;
+      if (status === 'APPROVED' && digest && submittedAt !== business.submittedAt.toISOString())
+        throw new ConflictException('Reload the latest profile submission before approving it.');
+      if (status === 'APPROVED' && digest && digest !== profileReviewDigest(business))
+        throw new ConflictException('The profile changed after submission. Ask the vendor to resubmit it.');
       const changed = await tx.business.updateMany({
-        where: { id, vendorStatus: business.vendorStatus },
+        where: { id, vendorStatus: business.vendorStatus, updatedAt: business.updatedAt },
         data: {
           vendorStatus: status,
           rejectionReason: status === 'REJECTED' ? message : null,
@@ -385,7 +391,7 @@ export class AdminApprovalsService {
           : `Vendor application ${status.toLowerCase()}`,
       );
       return review;
-    });
+    }, { isolationLevel: 'Serializable' });
     return {
       eventId: event.id,
       notification: await this.deliverNotification(id, event.id),

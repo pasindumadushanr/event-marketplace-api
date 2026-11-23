@@ -12,6 +12,7 @@ import { readCategories } from '../business-categories/category-reader';
 import { mergeProfileSettings } from './profile-settings';
 import { coordinates } from '../discovery/geo';
 import { validatePublicContact } from './public-contact';
+import { profileIsComplete, profileReviewDigest, reviewRelations } from './profile-review';
 import {
   businessCategoryIds,
   displayedBusinessCategories,
@@ -75,6 +76,8 @@ export class VendorBusinessService {
     )
       throw new BadRequestException('Invalid profile settings');
     const settings = data.profileSettings as any;
+    if (settings && 'profileReviewDigest' in settings)
+      throw new BadRequestException('Review metadata cannot be edited');
     if (settings && 'customCategoryRequests' in settings) {
       const requests = settings.customCategoryRequests;
       if (
@@ -175,8 +178,11 @@ export class VendorBusinessService {
     const ids = businessCategoryIds(business);
     const categories =
       ids.length > 1 ? (await readCategories(this.prisma)).rows : [];
+    const { profileReviewDigest: _internalDigest, ...settings } =
+      business.profileSettings || {};
     return {
       ...business,
+      profileSettings: settings,
       categoryIds: ids,
       categories: displayedBusinessCategories(business, categories),
     };
@@ -202,7 +208,7 @@ export class VendorBusinessService {
         data: {
           ...data,
           vendorId,
-          vendorStatus: 'UNDER_REVIEW',
+          vendorStatus: 'PENDING',
           status: 'INACTIVE',
           submittedAt: new Date(),
         },
@@ -214,8 +220,54 @@ export class VendorBusinessService {
       );
     }
 
-    await this.notifyApplication(vendorId, business, categories);
     return business;
+  }
+
+  async submitProfileReview(vendorId: string) {
+    const vendor = await this.prisma.user.findUnique({
+      where: { id: vendorId },
+      select: { emailVerified: true, firstName: true, lastName: true },
+    });
+    if (!vendor?.emailVerified)
+      throw new ForbiddenException('Verify your email before submitting your profile');
+    const business = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.business.findFirst({
+        where: { vendorId }, include: reviewRelations,
+      });
+      if (!current) throw new NotFoundException('Business not found');
+      const settings = (current.profileSettings as Record<string, any>) || {};
+      const digest = profileReviewDigest(current);
+      if (current.status === 'ACTIVE' || current.vendorStatus === 'SUSPENDED' ||
+          (['UNDER_REVIEW', 'APPROVED'].includes(current.vendorStatus) &&
+           settings.profileReviewDigest === digest))
+        throw new ConflictException('This profile cannot be submitted again right now');
+      if (!profileIsComplete(current))
+        throw new BadRequestException('Complete your required profile details before submitting');
+      const changed = await tx.business.updateMany({
+        where: { id: current.id, vendorStatus: current.vendorStatus, updatedAt: current.updatedAt },
+        data: {
+          vendorStatus: 'UNDER_REVIEW', status: 'INACTIVE', submittedAt: new Date(),
+          rejectionReason: null, informationRequest: null,
+          profileSettings: { ...settings, profileReviewDigest: digest },
+        },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Your profile changed. Reload and try again.');
+      await tx.applicationReviewEvent.create({
+        data: {
+          businessId: current.id, actorId: vendorId,
+          actorName: [vendor.firstName, vendor.lastName].filter(Boolean).join(' ') || 'Vendor',
+          action: 'SUBMITTED',
+        },
+      });
+      return current;
+    }, { isolationLevel: 'Serializable' });
+    try {
+      await this.notifyApplication(vendorId, business, (await readCategories(this.prisma)).rows);
+    } catch {
+      this.logger.warn('Profile saved for review, but admin notification could not be sent');
+    }
+    return { vendorStatus: 'UNDER_REVIEW', reviewStale: false };
   }
 
   private async notifyApplication(
@@ -261,67 +313,12 @@ export class VendorBusinessService {
 
   async resubmitOnboarding(vendorId: string, data: any) {
     data = this.editableData(data);
-    const business = await this.prisma.business.findFirst({
-      where: { vendorId },
-    });
+    const business = await this.prisma.business.findFirst({ where: { vendorId } });
     if (!business) throw new NotFoundException('Application not found');
     if (!['NEEDS_INFO', 'REJECTED'].includes(business.vendorStatus))
-      throw new ConflictException(
-        'Only applications needing changes can be resubmitted',
-      );
-    const { rows: categories } = await readCategories(this.prisma);
-    data = prepareCategorySelection(data, business, categories);
-    if (data.profileSettings)
-      data.profileSettings = mergeProfileSettings(
-        (business.profileSettings as any) || {},
-        data.profileSettings,
-      );
-    const updated = { ...business, ...data };
-    if (
-      ![updated.name, updated.phone, updated.email].every(
-        (value) => typeof value === 'string' && value.trim(),
-      )
-    )
-      throw new BadRequestException(
-        'Business name, email and phone are required',
-      );
-    const vendor = await this.prisma.user.findUnique({
-      where: { id: vendorId },
-      select: { firstName: true, lastName: true },
-    });
-    await this.prisma.$transaction(async (tx) => {
-      const result = await tx.business.updateMany({
-        where: {
-          id: business.id,
-          vendorId,
-          vendorStatus: business.vendorStatus,
-        },
-        data: {
-          ...data,
-          vendorStatus: 'UNDER_REVIEW',
-          status: 'INACTIVE',
-          rejectionReason: null,
-          informationRequest: null,
-          submittedAt: new Date(),
-        },
-      });
-      if (result.count !== 1)
-        throw new ConflictException(
-          'Your application changed. Reload before resubmitting',
-        );
-      await tx.applicationReviewEvent.create({
-        data: {
-          businessId: business.id,
-          actorId: vendorId,
-          actorName:
-            [vendor?.firstName, vendor?.lastName].filter(Boolean).join(' ') ||
-            'Vendor',
-          action: 'RESUBMITTED',
-        },
-      });
-    });
-    await this.notifyApplication(vendorId, updated, categories);
-    return { message: 'Application resubmitted for review' };
+      throw new ConflictException('Only profiles needing changes can use this form');
+    await this.updateMyBusiness(vendorId, data);
+    return { message: 'Changes saved. Preview your profile before submitting for review.' };
   }
 
   async getOnboardingStatus(vendorId: string) {
@@ -350,7 +347,18 @@ export class VendorBusinessService {
     return {
       ...business,
       emailVerified: user?.emailVerified || false,
+      reviewStale: await this.reviewIsStale(vendorId, business.vendorStatus),
     };
+  }
+
+  private async reviewIsStale(vendorId: string, status: string) {
+    if (!['UNDER_REVIEW', 'APPROVED'].includes(status)) return false;
+    const business = await this.prisma.business.findFirst({
+      where: { vendorId }, include: reviewRelations,
+    });
+    const digest = (business?.profileSettings as any)?.profileReviewDigest;
+    return !!business && business.status !== 'ACTIVE' && !!digest &&
+      digest !== profileReviewDigest(business);
   }
 
   async updateMyBusiness(vendorId: string, data: any) {
@@ -402,6 +410,7 @@ export class VendorBusinessService {
   async publishMyBusiness(vendorId: string) {
     const business = await (this.prisma as any).business.findFirst({
       where: { vendorId },
+      include: reviewRelations,
     });
     if (!business) throw new NotFoundException('Business not found.');
     if (business.vendorStatus !== 'APPROVED')
@@ -414,24 +423,15 @@ export class VendorBusinessService {
     });
     if (!vendor?.emailVerified)
       throw new ForbiddenException('Verify your email before publishing');
-    if (
-      ![
-        business.name,
-        business.description,
-        business.logo,
-        business.coverImage,
-        business.phone,
-        business.email,
-        business.address,
-        business.city,
-        business.profileSettings?.policies?.bookingPolicy,
-      ].every((value) => typeof value === 'string' && value.trim())
-    )
+    if (!profileIsComplete(business))
       throw new BadRequestException(
         'Complete your business details, photos, contact, location and booking policy before publishing',
       );
+    if (business.profileSettings?.profileReviewDigest &&
+        business.profileSettings.profileReviewDigest !== profileReviewDigest(business))
+      throw new ConflictException('Your profile changed after review. Submit it for review again.');
     return (this.prisma as any).business.update({
-      where: { id: business.id },
+      where: { id: business.id, vendorStatus: 'APPROVED', updatedAt: business.updatedAt },
       data: { status: 'ACTIVE' },
     });
   }

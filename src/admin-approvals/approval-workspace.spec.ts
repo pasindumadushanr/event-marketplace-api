@@ -143,7 +143,7 @@ describe('Approval filters and queue', () => {
             ],
           },
         ],
-        vendorStatus: { in: ['PENDING', 'UNDER_REVIEW', 'NEEDS_INFO'] },
+        vendorStatus: { in: ['UNDER_REVIEW', 'NEEDS_INFO'] },
       },
     });
     expect(result.where.OR).toHaveLength(4);
@@ -218,8 +218,18 @@ describe('Review decisions, privacy and notifications', () => {
       to: 'vendor@example.com',
     });
     expect(provider.sendMail.mock.calls[0][0].html).toContain(
-      'does not publish your business automatically',
+      'Your profile stays private until you publish it',
     );
+  });
+  it('does not let an administrator approve a draft or a stale submission', async () => {
+    const { service, business, db } = fixture();
+    business.vendorStatus = 'PENDING';
+    await expect(service.approveApplication('b', actor)).rejects.toMatchObject({ status: 409 });
+    business.vendorStatus = 'UNDER_REVIEW';
+    Object.assign(business, { profileSettings: { profileReviewDigest: 'stale' } });
+    await expect(service.approveApplication('b', actor, business.submittedAt.toISOString()))
+      .rejects.toMatchObject({ status: 409 });
+    expect(db.business.updateMany).not.toHaveBeenCalled();
   });
   it('rejects and emails an escaped reason, retaining an attributed history and redacted general audit', async () => {
     const { service, business, db, events, provider } = fixture();
@@ -367,32 +377,22 @@ describe('Review decisions, privacy and notifications', () => {
 });
 describe('Vendor corrections and resubmission', () => {
   it.each(['NEEDS_INFO', 'REJECTED'])(
-    'resubmits %s application under the authenticated vendor and resets queue time',
+    'saves %s corrections privately until the vendor explicitly requests review',
     async (state) => {
       const { db, business, email, events, provider } = fixture();
+      db.business.update = jest.fn(async ({ data }) => Object.assign(business, data));
       business.vendorStatus = state;
       await new VendorBusinessService(db, email).resubmitOnboarding('v', {
         name: 'Updated business',
       });
       expect(business).toMatchObject({
-        vendorStatus: 'UNDER_REVIEW',
+        vendorStatus: state,
         status: 'INACTIVE',
-        rejectionReason: null,
-        informationRequest: null,
         name: 'Updated business',
       });
-      expect(business.submittedAt.getTime()).toBeGreaterThan(
-        Date.now() - 10000,
-      );
-      expect(db.business.updateMany.mock.calls[0][0].where).toEqual({
-        id: 'b',
-        vendorId: 'v',
-        vendorStatus: state,
-      });
-      expect(events[0]).toMatchObject({ action: 'RESUBMITTED', actorId: 'v' });
-      expect(provider.sendMail.mock.calls[0][0].to).toBe(
-        'admineventmarketplace@gmail.com',
-      );
+      expect(db.business.updateMany).not.toHaveBeenCalled();
+      expect(events).toHaveLength(0);
+      expect(provider.sendMail).not.toHaveBeenCalled();
     },
   );
   it('rejects privileged fields and duplicate resubmission of an approved application', async () => {

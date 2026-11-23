@@ -6,6 +6,8 @@ describe('Vendor application admin email', () => {
   const db: any = {
     businessCategory: { findMany: jest.fn() },
     business: { findFirst: jest.fn(), create: jest.fn() },
+    $transaction: jest.fn(),
+    applicationReviewEvent: { create: jest.fn() },
     user: { findUnique: jest.fn() },
   };
   const provider = { sendMail: jest.fn() };
@@ -19,8 +21,13 @@ describe('Vendor application admin email', () => {
     district: 'Jaffna',
     email: 'vendor@example.com',
     phone: '0771234567',
-    vendorStatus: 'UNDER_REVIEW',
+    vendorStatus: 'PENDING',
     status: 'INACTIVE',
+    address: '10 Main Road',
+    description: 'Wedding photography',
+    logo: '/logo.jpg',
+    coverImage: '/cover.jpg',
+    profileSettings: { policies: { bookingPolicy: 'Call to book' } },
   };
   const originalUrl = process.env.FRONTEND_URL;
   beforeEach(() => {
@@ -38,7 +45,10 @@ describe('Vendor application admin email', () => {
     ]);
     db.business.findFirst.mockResolvedValue(null);
     db.business.create.mockResolvedValue(application);
+    db.business.updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    db.$transaction.mockImplementation((run) => run(db));
     db.user.findUnique.mockResolvedValue({
+      emailVerified: true,
       firstName: 'Nimali',
       lastName: 'Perera',
     });
@@ -57,6 +67,9 @@ describe('Vendor application admin email', () => {
         categoryId: 'photo',
       }),
     ).resolves.toEqual(application);
+    expect(provider.sendMail).not.toHaveBeenCalled();
+    db.business.findFirst.mockResolvedValue(application);
+    await service.submitProfileReview('vendor-1');
     expect(provider.sendMail).toHaveBeenCalledTimes(1);
     const sent = provider.sendMail.mock.calls[0][0];
     expect(sent.to).toBe('admineventmarketplace@gmail.com');
@@ -74,7 +87,7 @@ describe('Vendor application admin email', () => {
       'https://nakathata.lk/admin/vendors/approvals',
     ])
       expect(sent.html).toContain(text);
-    expect(db.business.create.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(db.business.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
       provider.sendMail.mock.invocationCallOrder[0],
     );
     expect(db.business.create).toHaveBeenCalledWith({
@@ -82,7 +95,7 @@ describe('Vendor application admin email', () => {
         name: application.name,
         categoryId: 'photo',
         vendorId: 'vendor-1',
-        vendorStatus: 'UNDER_REVIEW',
+        vendorStatus: 'PENDING',
         status: 'INACTIVE',
         submittedAt: expect.any(Date),
       },
@@ -124,40 +137,41 @@ describe('Vendor application admin email', () => {
       if (failure === 'throw')
         provider.sendMail.mockRejectedValue(new Error('Provider unavailable'));
       else provider.sendMail.mockResolvedValue(false);
+      db.business.findFirst.mockResolvedValue(application);
       await expect(
-        service.submitOnboarding('vendor-1', {
-          name: application.name,
-          categoryId: 'photo',
-        }),
-      ).resolves.toEqual(application);
+        service.submitProfileReview('vendor-1'),
+      ).resolves.toMatchObject({ vendorStatus: 'UNDER_REVIEW' });
       expect(Logger.prototype.warn).toHaveBeenCalledWith(
         expect.stringContaining('admin email delivery failed'),
       );
-      expect(db.business.create).toHaveBeenCalledTimes(1);
+      expect(db.business.updateMany).toHaveBeenCalledTimes(1);
     },
   );
   it('still returns the saved application if fetching the vendor name fails', async () => {
-    db.user.findUnique.mockRejectedValue(new Error('Lookup unavailable'));
+    db.business.findFirst.mockResolvedValue(application);
+    db.user.findUnique.mockResolvedValueOnce({ emailVerified: true })
+      .mockRejectedValueOnce(new Error('Lookup unavailable'));
     await expect(
-      service.submitOnboarding('vendor-1', {
-        name: application.name,
-        categoryId: 'photo',
-      }),
-    ).resolves.toEqual(application);
+      service.submitProfileReview('vendor-1'),
+    ).resolves.toMatchObject({ vendorStatus: 'UNDER_REVIEW' });
     expect(Logger.prototype.warn).toHaveBeenCalledWith(
       expect.stringContaining('admin notification failed'),
     );
   });
-  it('sends even when no super-admin or vendor account record can be found', async () => {
-    db.user.findUnique.mockResolvedValue(null);
-    await service.submitOnboarding('vendor-1', {
-      name: application.name,
-      categoryId: 'photo',
-    });
+  it('sends even when the optional notification recipient name lookup is empty', async () => {
+    db.business.findFirst.mockResolvedValue(application);
+    db.user.findUnique.mockResolvedValueOnce({ emailVerified: true }).mockResolvedValue(null);
+    await service.submitProfileReview('vendor-1');
     expect(provider.sendMail).toHaveBeenCalledTimes(1);
     expect(provider.sendMail.mock.calls[0][0].to).toBe(
       'admineventmarketplace@gmail.com',
     );
+  });
+  it('keeps incomplete profiles out of the review queue', async () => {
+    db.business.findFirst.mockResolvedValue({ ...application, coverImage: '' });
+    await expect(service.submitProfileReview('vendor-1')).rejects.toMatchObject({ status: 400 });
+    expect(db.business.updateMany).not.toHaveBeenCalled();
+    expect(provider.sendMail).not.toHaveBeenCalled();
   });
   it('escapes vendor content and uses the configured frontend origin', async () => {
     process.env.FRONTEND_URL = 'https://nakathata.lk/some-path';

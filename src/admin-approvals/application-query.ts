@@ -27,7 +27,7 @@ export function applicationQuery(
     throw new BadRequestException('Invalid page');
   const status = input.status || 'PENDING';
   const availableStatuses = {
-    PENDING: ['PENDING', 'UNDER_REVIEW', 'NEEDS_INFO'],
+    PENDING: ['UNDER_REVIEW', 'NEEDS_INFO'],
     UNDER_REVIEW: ['UNDER_REVIEW'],
     NEEDS_INFO: ['NEEDS_INFO'],
     APPROVED: ['APPROVED'],

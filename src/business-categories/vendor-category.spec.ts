@@ -34,6 +34,6 @@ describe('vendor category selection', () => {
     business.findFirst.mockResolvedValue(null);
     business.create.mockResolvedValue({ id: 'new-business' });
     await service.submitOnboarding('v', { name: 'New vendor', categoryId: 'service' });
-    expect(business.create).toHaveBeenCalledWith({ data: { name: 'New vendor', categoryId: 'service', vendorId: 'v', vendorStatus: 'UNDER_REVIEW', status: 'INACTIVE', submittedAt: expect.any(Date) } });
+    expect(business.create).toHaveBeenCalledWith({ data: { name: 'New vendor', categoryId: 'service', vendorId: 'v', vendorStatus: 'PENDING', status: 'INACTIVE', submittedAt: expect.any(Date) } });
   });
 });

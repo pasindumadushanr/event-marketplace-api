@@ -1,6 +1,7 @@
 import { VendorBusinessService } from './vendor-business.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { profileReviewDigest } from './profile-review';
 
 describe('VendorBusinessService', () => {
   const findFirst = jest.fn();
@@ -89,6 +90,27 @@ describe('VendorBusinessService', () => {
     });
   });
 
+  it('does not publish drafts or approve changes made after review', async () => {
+    const profile = {
+      id: 'b1', name: 'Wedding Studio', description: 'Photography',
+      logo: '/logo.jpg', coverImage: '/cover.jpg', address: 'Main Road',
+      city: 'Colombo', phone: '0771234567', email: 'vendor@example.com',
+      profileSettings: { policies: { bookingPolicy: 'Call first' }, profileReviewDigest: '' },
+      vendorStatus: 'PENDING',
+    };
+    findFirst.mockResolvedValue(profile);
+    findUnique.mockResolvedValue({ emailVerified: true });
+    await expect(service.publishMyBusiness('vendor-1')).rejects.toMatchObject({ status: 403 });
+    profile.vendorStatus = 'APPROVED';
+    profile.profileSettings.profileReviewDigest = profileReviewDigest(profile);
+    profile.description = 'Different description';
+    await expect(service.publishMyBusiness('vendor-1')).rejects.toMatchObject({ status: 409 });
+    expect(update).not.toHaveBeenCalled();
+    profile.description = 'Photography';
+    await service.publishMyBusiness('vendor-1');
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: { status: 'ACTIVE' } }));
+  });
+
   it('reads approval separately from public visibility', async () => {
     findUnique.mockResolvedValue({ emailVerified: true });
     findFirst.mockResolvedValue({
@@ -99,6 +121,7 @@ describe('VendorBusinessService', () => {
       vendorStatus: 'APPROVED',
       rejectionReason: null,
       emailVerified: true,
+      reviewStale: false,
     });
     expect(findFirst.mock.calls[0][0].select).toEqual({
       vendorStatus: true,
