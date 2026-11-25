@@ -12,6 +12,7 @@ import { whatsappNumber } from '../vendor-business/public-contact';
 
 const digest = (token: string) =>
   createHash('sha256').update(token).digest('hex');
+const isBirthday = (templateId: unknown) => templateId === 'B01' || templateId === 'B02';
 const safeRow = (row: any) => {
   const { previewDigest: _digest, previewExpires: _expiry, ...safe } = row;
   return safe;
@@ -59,10 +60,10 @@ export class InvitationsService {
     return safeRow(row);
   }
   async create(body: any, actor: string) {
-    const draft = invitationContent(body?.draft);
     const slug = invitationSlug(body?.slug);
-    if (!['W01', 'W02'].includes(body.templateId))
+    if (!['W01', 'W02'].includes(body.templateId) && !isBirthday(body.templateId))
       throw new BadRequestException('Choose an available invitation template');
+    const draft = invitationContent(body?.draft, false, isBirthday(body.templateId));
     try {
       return safeRow(
         await this.db.weddingInvitation.create({
@@ -101,8 +102,9 @@ export class InvitationsService {
   }
   async save(id: string, body: any, actor: string) {
     // Slugs are permanent after creation, so customer links cannot break.
+    const row = await this.get(id);
     return this.change(id, body?.revision, actor, {
-      draft: invitationContent(body?.draft),
+      draft: invitationContent(body?.draft, false, isBirthday(row.templateId)),
       previewDigest: null,
       previewExpires: null,
     });
@@ -116,7 +118,7 @@ export class InvitationsService {
             'Confirm customer approval before publishing',
           );
         return this.change(id, body.revision, actor, {
-          published: invitationContent(row.draft, true),
+          published: invitationContent(row.draft, true, isBirthday(row.templateId)),
           status: 'PUBLISHED',
           previewDigest: null,
           previewExpires: null,
@@ -130,7 +132,7 @@ export class InvitationsService {
           previewExpires: null,
         });
       case 'review': {
-        invitationContent(row.draft, true);
+        invitationContent(row.draft, true, isBirthday(row.templateId));
         const token = randomBytes(32).toString('hex');
         const result = await this.change(id, body.revision, actor, {
           previewDigest: digest(token),

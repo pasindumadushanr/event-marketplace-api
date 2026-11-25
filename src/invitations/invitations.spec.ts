@@ -36,6 +36,12 @@ describe('Invitation validation', () => {
       gallery: [],
     });
   });
+  it('requires both greetings for a birthday card instead of wedding details', () => {
+    const draft = { partnerOne: 'Amaya', welcome: 'Happy birthday!', birthdayMessageSi: 'සුබ උපන්දිනයක්!' };
+    expect(invitationContent(draft, true, true)).toMatchObject({ ...draft, weddingAt: '', rsvpPhone: '' });
+    expect(() => invitationContent({ ...draft, birthdayMessageSi: '' }, true, true)).toThrow('birthday message');
+    expect(() => invitationContent(draft)).toThrow('Unknown invitation field');
+  });
   it.each([
     { mapUrl: 'javascript:alert(1)' },
     { mapUrl: 'https://maps.app.goo.gl.evil.com/x' },
@@ -102,6 +108,17 @@ describe('Invitation lifecycle and privacy', () => {
     const safe = await service.get(id);
     expect(safe).not.toHaveProperty('previewDigest');
   });
+  it.each(['B01', 'B02'])('keeps %s drafts private and preserves the card through review and publication', async (templateId) => {
+    const draft = { partnerOne: 'Amaya', welcome: 'Happy birthday!', birthdayMessageSi: 'සුබ උපන්දිනයක්!' };
+    row = await service.create({ slug: 'happy-birthday-amaya', templateId, draft }, id);
+    expect(row).toMatchObject({ templateId, status: 'DRAFT' });
+    await expect(service.publicInvitation(row.slug)).rejects.toThrow('Invitation not available');
+    const saved = await service.save(id, { revision: 1, draft: { ...draft, birthdayNameSi: 'අමායා' } }, id);
+    const review = await service.action(id, { action: 'review', revision: saved.revision }, id);
+    expect(await service.review({ id, token: review.reviewToken })).toMatchObject({ templateId, content: { birthdayNameSi: 'අමායා' } });
+    await service.action(id, { action: 'publish', revision: review.revision, approved: true }, id);
+    expect(await service.publicInvitation(row.slug)).toMatchObject({ templateId, content: draft });
+  });
   it('requires customer approval and publishes a separate snapshot', async () => {
     await expect(
       service.action(id, { action: 'publish', revision: 1 }, id),
@@ -145,13 +162,14 @@ describe('Invitation lifecycle and privacy', () => {
     ).rejects.toThrow('available invitation template');
   });
   it('preserves the Sinhala design and content through creation, review and publication', async () => {
+    const templateId = 'W02';
     const draft = { ...content, partnerOne: 'අමායා', partnerTwo: 'කසුන්', welcome: 'ඔබට ආදරයෙන් ඇරයුම් කරමු.' };
-    row = await service.create({ slug: 'sinhala-wedding', templateId: 'W02', draft }, id);
-    expect(row.templateId).toBe('W02');
+    row = await service.create({ slug: 'sinhala-wedding', templateId, draft }, id);
+    expect(row.templateId).toBe(templateId);
     const review = await service.action(id, { action: 'review', revision: 1 }, id);
-    expect(await service.review({ id, token: review.reviewToken })).toMatchObject({ templateId: 'W02', content: { partnerOne: 'අමායා' } });
+    expect(await service.review({ id, token: review.reviewToken })).toMatchObject({ templateId, content: { partnerOne: 'අමායා' } });
     await service.action(id, { action: 'publish', revision: 2, approved: true }, id);
-    expect(await service.publicInvitation(row.slug)).toMatchObject({ templateId: 'W02', content: { welcome: draft.welcome } });
+    expect(await service.publicInvitation(row.slug)).toMatchObject({ templateId, content: { welcome: draft.welcome } });
   });
   it('hashes review tokens, expires them and revokes them when edits are saved', async () => {
     const reviewed = await service.action(

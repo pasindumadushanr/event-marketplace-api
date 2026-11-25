@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { whatsappNumber } from '../vendor-business/public-contact';
 import { r2ObjectKey } from '../common/providers/r2-config';
 
-export function invitationContent(input: any, publish = false) {
+export function invitationContent(input: any, publish = false, birthday = false) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new BadRequestException('Enter invitation details');
   const limits = {
@@ -16,6 +16,7 @@ export function invitationContent(input: any, publish = false) {
     rsvpPhone: 80,
     couplePhoto: 2048,
     mapUrl: 2048,
+    ...(birthday ? { birthdayNameSi: 80, birthdayMessageSi: 1000 } : {}),
   };
   if (
     Object.keys(input).some(
@@ -68,6 +69,15 @@ export function invitationContent(input: any, publish = false) {
   if (input.music !== undefined && typeof input.music !== 'boolean')
     throw new BadRequestException('Invalid music choice');
   result.music = input.music === true;
+  if (birthday) {
+    // Keep common photo fields, but never copy wedding or RSVP details to a wish.
+    for (const key of ['partnerTwo', 'venue', 'address', 'weddingAt', 'rsvpPhone', 'mapUrl', 'story'])
+      result[key] = '';
+    result.music = false;
+    if (publish && (!result.partnerOne || !result.welcome || !result.birthdayMessageSi))
+      throw new BadRequestException('Add the recipient’s name and a birthday message in English and Sinhala before sharing');
+    return result;
+  }
   if (result.rsvpPhone) {
     result.rsvpPhone = whatsappNumber(result.rsvpPhone);
     if (!result.rsvpPhone)
