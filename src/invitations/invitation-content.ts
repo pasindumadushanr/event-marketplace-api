@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { whatsappNumber } from '../vendor-business/public-contact';
 import { r2ObjectKey } from '../common/providers/r2-config';
 
-export function invitationContent(input: any, publish = false, birthday = false) {
+export function invitationContent(input: any, publish = false, birthday = false, classic = false) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new BadRequestException('Enter invitation details');
   const limits = {
@@ -17,6 +17,7 @@ export function invitationContent(input: any, publish = false, birthday = false)
     couplePhoto: 2048,
     mapUrl: 2048,
     ...(birthday ? { birthdayNameSi: 80, birthdayMessageSi: 1000 } : {}),
+    ...(classic ? { familyOne: 160, familyTwo: 160, weddingVerse: 400 } : {}),
   };
   if (
     Object.keys(input).some(
@@ -78,6 +79,7 @@ export function invitationContent(input: any, publish = false, birthday = false)
       throw new BadRequestException('Add the recipient’s name and a birthday message in English and Sinhala before sharing');
     return result;
   }
+  if (classic) result.music = false;
   if (result.rsvpPhone) {
     result.rsvpPhone = whatsappNumber(result.rsvpPhone);
     if (!result.rsvpPhone)
@@ -131,11 +133,13 @@ export function invitationContent(input: any, publish = false, birthday = false)
       'address',
       'mapUrl',
       'rsvpPhone',
-      'couplePhoto',
+      ...(classic ? [] : ['couplePhoto']),
     ].some((k) => !result[k])
   )
     throw new BadRequestException(
-      'Complete names, welcome, date/time, venue, address, map, photo and RSVP number before publishing',
+      classic
+        ? 'Complete names, welcome, date/time, venue, address, map and RSVP number before publishing'
+        : 'Complete names, welcome, date/time, venue, address, map, photo and RSVP number before publishing',
     );
   return result;
 }

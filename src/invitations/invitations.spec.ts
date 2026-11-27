@@ -119,6 +119,21 @@ describe('Invitation lifecycle and privacy', () => {
     await service.action(id, { action: 'publish', revision: review.revision, approved: true }, id);
     expect(await service.publicInvitation(row.slug)).toMatchObject({ templateId, content: draft });
   });
+  it.each(['W07', 'W08', 'W09'])('preserves %s family lines and verse, with or without a photo', async (templateId) => {
+    const draft = { ...content, couplePhoto: '', familyOne: 'The Perera family', familyTwo: '', weddingVerse: 'Two hearts, one beginning.' };
+    row = await service.create({ slug: 'classic-wedding', templateId, draft }, id);
+    await expect(service.publicInvitation(row.slug)).rejects.toThrow('Invitation not available');
+    await expect(service.save(id, { revision: 1, draft: { ...draft, weddingVerse: 'x'.repeat(401) } }, id)).rejects.toThrow('Invalid weddingVerse');
+    const saved = await service.save(id, { revision: 1, draft: { ...draft, familyTwo: 'The Silva family' } }, id);
+    const review = await service.action(id, { action: 'review', revision: saved.revision }, id);
+    expect(await service.review({ id, token: review.reviewToken })).toMatchObject({ templateId, content: { familyTwo: 'The Silva family' } });
+    await service.action(id, { action: 'publish', revision: review.revision, approved: true }, id);
+    expect(await service.publicInvitation(row.slug)).toMatchObject({
+      templateId,
+      content: { couplePhoto: '', familyOne: draft.familyOne, familyTwo: 'The Silva family', weddingVerse: draft.weddingVerse, rsvpPhone: '94771234567', music: false },
+    });
+    expect(() => invitationContent(draft)).toThrow('Unknown invitation field');
+  });
   it('requires customer approval and publishes a separate snapshot', async () => {
     await expect(
       service.action(id, { action: 'publish', revision: 1 }, id),
